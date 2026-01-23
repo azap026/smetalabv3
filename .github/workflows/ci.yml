@@ -48,8 +48,9 @@ jobs:
       - name: Build
         run: pnpm build
         env:
-          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          BASE_URL: ${{ secrets.BASE_URL }}
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL || 'postgresql://placeholder:placeholder@localhost:5432/placeholder' }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_placeholder' }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder' }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'placeholder_auth_secret_for_ci_build' }}
+          BASE_URL: ${{ secrets.BASE_URL || 'http://localhost:3000' }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder' }}

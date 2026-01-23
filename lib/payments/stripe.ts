@@ -147,36 +147,46 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
-  const prices = await stripe.prices.list({
-    expand: ['data.product'],
-    active: true,
-    type: 'recurring'
-  });
+  try {
+    const prices = await stripe.prices.list({
+      expand: ['data.product'],
+      active: true,
+      type: 'recurring'
+    });
 
-  return prices.data.map((price) => ({
-    id: price.id,
-    productId:
-      typeof price.product === 'string' ? price.product : price.product.id,
-    unitAmount: price.unit_amount,
-    currency: price.currency,
-    interval: price.recurring?.interval,
-    trialPeriodDays: price.recurring?.trial_period_days
-  }));
+    return prices.data.map((price) => ({
+      id: price.id,
+      productId:
+        typeof price.product === 'string' ? price.product : price.product.id,
+      unitAmount: price.unit_amount,
+      currency: price.currency,
+      interval: price.recurring?.interval,
+      trialPeriodDays: price.recurring?.trial_period_days
+    }));
+  } catch {
+    // Return empty array if Stripe is not configured (e.g., during CI build)
+    return [];
+  }
 }
 
 export async function getStripeProducts() {
-  const products = await stripe.products.list({
-    active: true,
-    expand: ['data.default_price']
-  });
+  try {
+    const products = await stripe.products.list({
+      active: true,
+      expand: ['data.default_price']
+    });
 
-  return products.data.map((product) => ({
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    defaultPriceId:
-      typeof product.default_price === 'string'
-        ? product.default_price
-        : product.default_price?.id
-  }));
+    return products.data.map((product) => ({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      defaultPriceId:
+        typeof product.default_price === 'string'
+          ? product.default_price
+          : product.default_price?.id
+    }));
+  } catch {
+    // Return empty array if Stripe is not configured (e.g., during CI build)
+    return [];
+  }
 }

@@ -4,8 +4,8 @@ description: Before each commit, run through the following checklist to maintain
 
 Database Migrations in Sync: Run the Drizzle ORM migration generation and apply it. Use drizzle-kit generate to create any new migration files for schema changes, and then run drizzle-kit push to apply them. This ensures your database schema and migration files are up to date and in sync.
 
-Lint and Type-Check: Execute the linters and TypeScript checker to catch any syntax or type errors. For example, run pnpm lint and pnpm type-check. Resolve all linting warnings/errors and TypeScript issues before committing. The codebase should pass all linting rules and strict type checks at commit time.
+Lint and Type-Check: Before every commit, you MUST execute the linters and TypeScript checker to ensure compliance with the project's strict standards (Rules #3 and #7). Run `npm run lint` and `npm run type-check`. All errors must be resolved. Warnings should be addressed if possible. This step is critical to prevent broken code from reaching the repository.
 
-Run Tests: Run the full test suite with pnpm test (or the appropriate test command). Verify that all unit tests and integration tests pass. If any test fails, fix the underlying issue or update the test as needed. The goal is that the repository’s tests are green (passing) on every commit.
+Run Tests: Ensure all tests pass by running `npm test`. If no test suite is configured yet, work on adding basic unit tests for new logic as required by Rule #7.
 
-Update Documentation: Review whether your changes affect any documented behavior, API, or configuration. If so, update the README.md and any other relevant documentation files to reflect these changes. This includes updating usage examples, API endpoints, environment variables, or instructions if they have been altered. Ensure that documentation is consistent with the code. Only commit once you’ve confirmed that docs are adjusted for any new or changed features.
+Update Documentation: If your changes modify any features, API, or project structure, update README.md and other relevant docs (Rule #8). This includes keeping workflows like this one up to date with the actual project scripts.

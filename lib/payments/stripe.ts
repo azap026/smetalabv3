@@ -8,7 +8,7 @@ import {
 } from '@/lib/db/queries';
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil'
+  apiVersion: '2025-08-27.basil'
 });
 
 export async function createCheckoutSession({
@@ -133,7 +133,7 @@ export async function handleSubscriptionChange(
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: subscriptionId,
       stripeProductId: plan?.product as string,
-      planName: (plan?.product as Stripe.Product).name,
+      planName: typeof plan?.product !== 'string' ? (plan?.product as Stripe.Product)?.name : '',
       subscriptionStatus: status
     });
   } else if (status === 'canceled' || status === 'unpaid') {

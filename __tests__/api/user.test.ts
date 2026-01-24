@@ -3,20 +3,34 @@ import { GET } from '@/app/api/user/route';
 import * as queries from '@/lib/db/queries';
 import { User } from '@/lib/db/schema';
 
+import * as rbac from '@/lib/auth/rbac';
+
 vi.mock('@/lib/db/queries', () => ({
     getUser: vi.fn(),
+    getUserWithTeam: vi.fn(),
+}));
+
+vi.mock('@/lib/auth/rbac', () => ({
+    getUserPermissions: vi.fn(),
 }));
 
 describe('User API Route', () => {
     it('should return user data when authenticated', async () => {
         const mockUser = { id: 1, name: 'Test User', email: 'test@example.com' } as User;
+        const mockPermissions = ['projects.view'];
         vi.mocked(queries.getUser).mockResolvedValue(mockUser);
+        vi.mocked(queries.getUserWithTeam).mockResolvedValue({ user: mockUser, teamId: 1 });
+        vi.mocked(rbac.getUserPermissions).mockResolvedValue(mockPermissions);
 
         const response = await GET();
         const data = await response.json();
 
         expect(response.status).toBe(200);
-        expect(data).toEqual(mockUser);
+        expect(data).toEqual({
+            ...mockUser,
+            teamId: 1,
+            permissions: mockPermissions,
+        });
     });
 
     it('should return null when not authenticated', async () => {

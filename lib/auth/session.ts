@@ -20,6 +20,7 @@ export async function comparePasswords(
 type SessionData = {
   user: { id: number };
   isAdmin: boolean;
+  platformRole: string | null;
   expires: string;
 };
 
@@ -49,6 +50,7 @@ export async function setSession(user: User) {
   const session: SessionData = {
     user: { id: user.id },
     isAdmin: user.isAdmin ?? false,
+    platformRole: user.platformRole ?? null,
     expires: expiresInOneDay.toISOString(),
   };
   const encryptedSession = await signToken(session);

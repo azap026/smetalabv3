@@ -18,8 +18,13 @@ import { User as UserType } from '@/lib/db/schema';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+type UserWithPermissions = UserType & {
+    permissions: string[];
+    teamId: number | null;
+};
+
 export function UserMenu() {
-    const { data: user } = useSWR<UserType>('/api/user', fetcher);
+    const { data: user } = useSWR<UserWithPermissions>('/api/user', fetcher);
     const router = useRouter();
 
     async function handleSignOut() {
@@ -79,7 +84,7 @@ export function UserMenu() {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Настройки</span>
                 </DropdownMenuItem>
-                {user.isAdmin && (
+                {(user.permissions?.includes('tenants.view') || user.isAdmin) && (
                     <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => router.push('/dashboard')}>

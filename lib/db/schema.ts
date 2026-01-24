@@ -1,25 +1,46 @@
 import {
   pgTable,
+  pgEnum,
   serial,
   varchar,
   text,
   timestamp,
   integer,
   boolean,
+  uniqueIndex,
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+
+// ═══════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════
+
+export const platformRoleEnum = pgEnum('platform_role', ['superadmin', 'support']);
+export const tenantRoleEnum = pgEnum('tenant_role', ['admin', 'estimator', 'manager']);
+export const permissionScopeEnum = pgEnum('permission_scope', ['platform', 'tenant']);
+export const accessLevelEnum = pgEnum('access_level', ['view', 'comment', 'download']);
+
+// ═══════════════════════════════════════════════════════════════
+// USERS
+// ═══════════════════════════════════════════════════════════════
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 100 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
-  role: varchar('role', { length: 20 }).notNull().default('member'),
-  isAdmin: boolean('is_admin').notNull().default(false),
+  role: varchar('role', { length: 20 }).notNull().default('member'), // legacy
+  platformRole: platformRoleEnum('platform_role'),
+  isAdmin: boolean('is_admin').notNull().default(false), // legacy - will be removed
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
 });
+
+// ═══════════════════════════════════════════════════════════════
+// TEAMS (Tenants)
+// ═══════════════════════════════════════════════════════════════
 
 export const teams = pgTable('teams', {
   id: serial('id').primaryKey(),
@@ -33,6 +54,10 @@ export const teams = pgTable('teams', {
   subscriptionStatus: varchar('subscription_status', { length: 20 }),
 });
 
+// ═══════════════════════════════════════════════════════════════
+// TEAM MEMBERS
+// ═══════════════════════════════════════════════════════════════
+
 export const teamMembers = pgTable('team_members', {
   id: serial('id').primaryKey(),
   userId: integer('user_id')
@@ -41,9 +66,99 @@ export const teamMembers = pgTable('team_members', {
   teamId: integer('team_id')
     .notNull()
     .references(() => teams.id),
-  role: varchar('role', { length: 50 }).notNull(),
+  role: tenantRoleEnum('role').notNull(),
   joinedAt: timestamp('joined_at').notNull().defaultNow(),
+  leftAt: timestamp('left_at'),
+}, (table) => [
+  uniqueIndex('team_members_active_unique').on(table.teamId, table.userId),
+]);
+
+// ═══════════════════════════════════════════════════════════════
+// PERMISSIONS
+// ═══════════════════════════════════════════════════════════════
+
+export const permissions = pgTable('permissions', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 80 }).notNull().unique(),
+  name: varchar('name', { length: 100 }).notNull(),
+  description: text('description'),
+  scope: permissionScopeEnum('scope').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// ═══════════════════════════════════════════════════════════════
+// ROLE PERMISSIONS (Tenant roles only)
+// ═══════════════════════════════════════════════════════════════
+
+export const rolePermissions = pgTable('role_permissions', {
+  id: serial('id').primaryKey(),
+  role: tenantRoleEnum('role').notNull(),
+  permissionId: integer('permission_id')
+    .notNull()
+    .references(() => permissions.id),
+}, (table) => [
+  uniqueIndex('role_permissions_unique').on(table.role, table.permissionId),
+]);
+
+// ═══════════════════════════════════════════════════════════════
+// PLATFORM ROLE PERMISSIONS
+// ═══════════════════════════════════════════════════════════════
+
+export const platformRolePermissions = pgTable('platform_role_permissions', {
+  id: serial('id').primaryKey(),
+  platformRole: platformRoleEnum('platform_role').notNull(),
+  permissionId: integer('permission_id')
+    .notNull()
+    .references(() => permissions.id),
+}, (table) => [
+  uniqueIndex('platform_role_permissions_unique').on(table.platformRole, table.permissionId),
+]);
+
+// ═══════════════════════════════════════════════════════════════
+// ESTIMATE SHARES (Share links for customers)
+// ═══════════════════════════════════════════════════════════════
+
+export const estimateShares = pgTable('estimate_shares', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  estimateId: integer('estimate_id').notNull(),
+  tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+  accessLevel: accessLevelEnum('access_level').notNull().default('view'),
+  expiresAt: timestamp('expires_at'),
+  revokedAt: timestamp('revoked_at'),
+  lastAccessedAt: timestamp('last_accessed_at'),
+  createdByUserId: integer('created_by_user_id')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => [
+  index('estimate_shares_team_estimate_idx').on(table.teamId, table.estimateId),
+  index('estimate_shares_expires_idx').on(table.expiresAt),
+]);
+
+// ═══════════════════════════════════════════════════════════════
+// IMPERSONATION SESSIONS (Audit for superadmin)
+// ═══════════════════════════════════════════════════════════════
+
+export const impersonationSessions = pgTable('impersonation_sessions', {
+  id: serial('id').primaryKey(),
+  superadminUserId: integer('superadmin_user_id')
+    .notNull()
+    .references(() => users.id),
+  targetTeamId: integer('target_team_id')
+    .notNull()
+    .references(() => teams.id),
+  sessionToken: varchar('session_token', { length: 64 }).notNull().unique(),
+  startedAt: timestamp('started_at').notNull().defaultNow(),
+  endedAt: timestamp('ended_at'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIVITY LOGS
+// ═══════════════════════════════════════════════════════════════
 
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
@@ -56,13 +171,17 @@ export const activityLogs = pgTable('activity_logs', {
   ipAddress: varchar('ip_address', { length: 45 }),
 });
 
+// ═══════════════════════════════════════════════════════════════
+// INVITATIONS
+// ═══════════════════════════════════════════════════════════════
+
 export const invitations = pgTable('invitations', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
     .notNull()
     .references(() => teams.id),
   email: varchar('email', { length: 255 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull(),
+  role: tenantRoleEnum('role').notNull(),
   invitedBy: integer('invited_by')
     .notNull()
     .references(() => users.id),
@@ -70,15 +189,23 @@ export const invitations = pgTable('invitations', {
   status: varchar('status', { length: 20 }).notNull().default('pending'),
 });
 
+// ═══════════════════════════════════════════════════════════════
+// RELATIONS
+// ═══════════════════════════════════════════════════════════════
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
   invitations: many(invitations),
+  estimateShares: many(estimateShares),
+  impersonationSessions: many(impersonationSessions),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
+  estimateSharesCreated: many(estimateShares),
+  impersonationSessions: many(impersonationSessions),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -114,6 +241,51 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   }),
 }));
 
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+  rolePermissions: many(rolePermissions),
+  platformRolePermissions: many(platformRolePermissions),
+}));
+
+export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
+  permission: one(permissions, {
+    fields: [rolePermissions.permissionId],
+    references: [permissions.id],
+  }),
+}));
+
+export const platformRolePermissionsRelations = relations(platformRolePermissions, ({ one }) => ({
+  permission: one(permissions, {
+    fields: [platformRolePermissions.permissionId],
+    references: [permissions.id],
+  }),
+}));
+
+export const estimateSharesRelations = relations(estimateShares, ({ one }) => ({
+  team: one(teams, {
+    fields: [estimateShares.teamId],
+    references: [teams.id],
+  }),
+  createdBy: one(users, {
+    fields: [estimateShares.createdByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const impersonationSessionsRelations = relations(impersonationSessions, ({ one }) => ({
+  superadmin: one(users, {
+    fields: [impersonationSessions.superadminUserId],
+    references: [users.id],
+  }),
+  targetTeam: one(teams, {
+    fields: [impersonationSessions.targetTeamId],
+    references: [teams.id],
+  }),
+}));
+
+// ═══════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;
@@ -124,6 +296,13 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
+export type Permission = typeof permissions.$inferSelect;
+export type NewPermission = typeof permissions.$inferInsert;
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type PlatformRolePermission = typeof platformRolePermissions.$inferSelect;
+export type EstimateShare = typeof estimateShares.$inferSelect;
+export type ImpersonationSession = typeof impersonationSessions.$inferSelect;
+
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
     user: Pick<User, 'id' | 'name' | 'email'>;
@@ -141,4 +320,12 @@ export enum ActivityType {
   REMOVE_TEAM_MEMBER = 'REMOVE_TEAM_MEMBER',
   INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
   ACCEPT_INVITATION = 'ACCEPT_INVITATION',
+  IMPERSONATION_START = 'IMPERSONATION_START',
+  IMPERSONATION_END = 'IMPERSONATION_END',
 }
+
+// Role types for TypeScript
+export type PlatformRole = 'superadmin' | 'support';
+export type TenantRole = 'admin' | 'estimator' | 'manager';
+export type PermissionScope = 'platform' | 'tenant';
+export type AccessLevel = 'view' | 'comment' | 'download';

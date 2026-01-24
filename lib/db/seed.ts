@@ -67,7 +67,7 @@ async function seed() {
   await db.insert(teamMembers).values({
     teamId: team.id,
     userId: user.id,
-    role: 'owner',
+    role: 'admin',
   });
 
   await createStripeProducts();

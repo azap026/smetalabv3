@@ -25,8 +25,16 @@ export async function middleware(request: NextRequest) {
       const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       // Check if user is admin for /dashboard routes
-      if (isDashboardRoute && !parsed.isAdmin) {
-        return NextResponse.redirect(new URL('/app', request.url));
+      if (isDashboardRoute) {
+        const hasPlatformAccess = parsed.platformRole === 'superadmin' || parsed.platformRole === 'support' || parsed.isAdmin;
+
+        if (!hasPlatformAccess) {
+          return NextResponse.redirect(new URL('/app', request.url));
+        }
+
+        if (parsed.isAdmin && !parsed.platformRole) {
+          // Legacy access handled by hasPlatformAccess check above
+        }
       }
 
       res.cookies.set({

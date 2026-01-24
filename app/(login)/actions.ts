@@ -14,7 +14,8 @@ import {
   type NewTeamMember,
   type NewActivityLog,
   ActivityType,
-  invitations
+  invitations,
+  type TenantRole
 } from '@/lib/db/schema';
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
@@ -143,7 +144,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   }
 
   let teamId: number;
-  let userRole: string;
+  let userRole: TenantRole;
   let createdTeam: typeof teams.$inferSelect | null = null;
 
   if (inviteId) {
@@ -197,7 +198,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     }
 
     teamId = createdTeam.id;
-    userRole = 'owner';
+    userRole = 'admin';
 
     await logActivity(teamId, createdUser.id, ActivityType.CREATE_TEAM);
   }
@@ -395,7 +396,7 @@ export const removeTeamMember = validatedActionWithUser(
 
 const inviteTeamMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
-  role: z.enum(['member', 'owner'])
+  role: z.enum(['admin', 'estimator', 'manager'])
 });
 
 export const inviteTeamMember = validatedActionWithUser(

@@ -25,6 +25,15 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import useSWR from 'swr';
+import { User as UserType } from '@/lib/db/schema';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+type UserWithPermissions = UserType & {
+    permissions: string[];
+};
+
 const mainNavItems = [
     {
         title: 'Главная',
@@ -35,6 +44,7 @@ const mainNavItems = [
         title: 'Проекты',
         url: '/app/projects',
         icon: FolderKanban,
+        requiredPermission: 'projects.view',
     },
     {
         title: 'Закупки',
@@ -50,6 +60,7 @@ const mainNavItems = [
         title: 'Команда',
         url: '/app/team',
         icon: Users,
+        requiredPermission: 'team.view',
     },
 ];
 
@@ -78,6 +89,13 @@ const guideNavItems = [
 
 export function AppSidebar() {
     const pathname = usePathname();
+    const { data: user } = useSWR<UserWithPermissions>('/api/user', fetcher);
+
+    const filteredNavItems = mainNavItems.filter((item) => {
+        if (!item.requiredPermission) return true;
+        if (user?.isAdmin) return true;
+        return user?.permissions?.includes(item.requiredPermission);
+    });
 
     return (
         <Sidebar>
@@ -94,7 +112,7 @@ export function AppSidebar() {
                     <SidebarGroupLabel>Навигация</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {mainNavItems.map((item) => (
+                            {filteredNavItems.map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild isActive={pathname === item.url}>
                                         <Link href={item.url}>
@@ -129,7 +147,7 @@ export function AppSidebar() {
                 </SidebarGroup>
             </SidebarContent>
             <SidebarFooter>
-                {/* TODO: User menu / logout */}
+                {/* User menu is in layout.tsx header typically, but footer can have it too */}
             </SidebarFooter>
         </Sidebar>
     );

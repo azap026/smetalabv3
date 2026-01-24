@@ -53,9 +53,11 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 type="email"
                 autoComplete="email"
                 defaultValue={state?.email || emailParam || ''}
+                readOnly={!!inviteId && mode === 'signup'}
                 required
                 maxLength={50}
-                className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
+                className={`appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm ${!!inviteId && mode === 'signup' ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
                 placeholder="Enter your email"
               />
             </div>
@@ -86,7 +88,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
             </div>
           </div>
 
-          {mode === 'signup' && (
+          {mode === 'signup' && !inviteId && (
             <div>
               <Label
                 htmlFor="organizationName"
@@ -99,7 +101,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                   id="organizationName"
                   name="organizationName"
                   type="text"
-                  required
+                  required={!inviteId}
                   maxLength={100}
                   className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
                   placeholder="ООО Smetalab"
@@ -152,6 +154,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 ...(redirect ? { redirect } : {}),
                 ...(priceId ? { priceId } : {}),
                 ...(inviteId ? { inviteId } : {}),
+                ...(emailParam ? { email: emailParam } : {}),
               }).toString()}`}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
             >
@@ -165,3 +168,4 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     </div>
   );
 }
+

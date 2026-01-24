@@ -26,6 +26,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import { sendInvitationEmail } from '@/lib/email/email';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -440,13 +441,13 @@ export const inviteTeamMember = validatedActionWithUser(
     }
 
     // Create a new invitation
-    await db.insert(invitations).values({
+    const [newInvitation] = await db.insert(invitations).values({
       teamId: userWithTeam.teamId,
       email,
       role,
       invitedBy: user.id,
       status: 'pending'
-    });
+    }).returning();
 
     await logActivity(
       userWithTeam.teamId,
@@ -454,9 +455,28 @@ export const inviteTeamMember = validatedActionWithUser(
       ActivityType.INVITE_TEAM_MEMBER
     );
 
-    // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
-    // await sendInvitationEmail(email, userWithTeam.team.name, role)
+    // Get team name for email
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, userWithTeam.teamId))
+      .limit(1);
 
-    return { success: 'Invitation sent successfully' };
+    // Send invitation email
+    const emailResult = await sendInvitationEmail({
+      to: email,
+      teamName: team?.name || 'Команда',
+      role,
+      inviteId: newInvitation.id,
+      inviterEmail: user.email,
+    });
+
+    if (!emailResult.success) {
+      console.error('Failed to send invitation email:', emailResult.error);
+      // Still return success - invitation was created, just email failed
+      return { success: 'Приглашение создано, но письмо не отправлено. Ссылка: ' + `${process.env.BASE_URL || 'http://localhost:3000'}/sign-up?inviteId=${newInvitation.id}` };
+    }
+
+    return { success: 'Приглашение отправлено на ' + email };
   }
 );

@@ -9,12 +9,63 @@ A SaaS application built with **Next.js**, featuring authentication, Stripe paym
 - Marketing landing page (`/`) with animated Terminal element
 - Pricing page (`/pricing`) which connects to Stripe Checkout
 - Dashboard pages with CRUD operations on users/teams
-- Basic RBAC with Owner and Member roles
+- **Advanced RBAC (Role-Based Access Control)** with platform and tenant roles
 - Subscription management with Stripe Customer Portal
 - Email/password authentication with JWTs stored to cookies
 - Global middleware to protect logged-in routes
 - Local middleware to protect Server Actions or validate Zod schemas
 - Activity logging system for any user events
+- Admin dashboard with permissions matrix UI
+
+## Role-Based Access Control (RBAC)
+
+### Role Types
+
+**Platform Roles** (for platform-level access):
+| Role | Description |
+|------|-------------|
+| `superadmin` | Full platform access, can impersonate tenants |
+| `support` | Limited platform access for customer support |
+
+**Tenant Roles** (for team-level access):
+| Role | Description |
+|------|-------------|
+| `admin` | Full team access, can manage members and billing |
+| `estimator` | Create and edit estimates, view projects |
+| `manager` | Manage materials and purchases, view-only estimates |
+
+### Usage
+
+**Server-side (API routes, Server Components):**
+```typescript
+import { checkAccess, isSuperadmin } from '@/lib/auth/access';
+
+// Check specific permission
+const { authorized } = await checkAccess('estimates.create', tenantId);
+
+// Check if superadmin
+if (await isSuperadmin()) { /* ... */ }
+```
+
+**Client-side (React components):**
+```typescript
+import { usePermissions } from '@/hooks/use-permissions';
+
+function MyComponent() {
+  const { hasPermission, loading } = usePermissions();
+  
+  if (hasPermission('estimates.create')) {
+    return <CreateButton />;
+  }
+}
+```
+
+### Seeding Permissions
+
+```bash
+# Seed permissions and role mappings
+pnpm db:seed:permissions
+```
 
 ## Tech Stack
 

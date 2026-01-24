@@ -46,7 +46,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function TeamPage() {
     const { data: team, isLoading } = useSWR<TeamData>('/api/team', fetcher);
     const [email, setEmail] = useState('');
-    const [role, setRole] = useState<'member' | 'owner'>('member');
+    const [role, setRole] = useState<'admin' | 'estimator' | 'manager'>('estimator');
     const [isInviting, setIsInviting] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -86,10 +86,12 @@ export default function TeamPage() {
 
     const getRoleBadgeVariant = (role: string) => {
         switch (role) {
-            case 'owner':
-                return 'default';
             case 'admin':
+                return 'default';
+            case 'estimator':
                 return 'secondary';
+            case 'manager':
+                return 'outline';
             default:
                 return 'outline';
         }
@@ -97,12 +99,14 @@ export default function TeamPage() {
 
     const getRoleLabel = (role: string) => {
         switch (role) {
-            case 'owner':
-                return 'Владелец';
             case 'admin':
                 return 'Администратор';
+            case 'estimator':
+                return 'Сметчик';
+            case 'manager':
+                return 'Менеджер';
             default:
-                return 'Участник';
+                return role;
         }
     };
 
@@ -156,11 +160,14 @@ export default function TeamPage() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent>
-                                    <DropdownMenuItem onClick={() => setRole('member')}>
-                                        Участник
+                                    <DropdownMenuItem onClick={() => setRole('admin')}>
+                                        Администратор
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setRole('owner')}>
-                                        Владелец
+                                    <DropdownMenuItem onClick={() => setRole('estimator')}>
+                                        Сметчик
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setRole('manager')}>
+                                        Менеджер
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>

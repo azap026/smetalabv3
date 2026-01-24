@@ -93,5 +93,7 @@ jobs:
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Trigger Render Deployment
-        if: success() && secrets.RENDER_DEPLOY_HOOK_URL != ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: success() && env.RENDER_DEPLOY_HOOK != ''
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}

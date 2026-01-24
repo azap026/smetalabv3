@@ -97,17 +97,18 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     return createCheckoutSession({ team: foundTeam, priceId });
   }
 
-  redirect('/dashboard');
+  redirect('/app');
 });
 
 const signUpSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  organizationName: z.string().min(2).max(100).optional(),
   inviteId: z.string().optional()
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { email, password, inviteId } = data;
+  const { email, password, organizationName, inviteId } = data;
 
   const existingUser = await db
     .select()
@@ -180,8 +181,9 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     }
   } else {
     // Create a new team if there's no invitation
+    const teamName = organizationName || `${email}'s Team`;
     const newTeam: NewTeam = {
-      name: `${email}'s Team`
+      name: teamName
     };
 
     [createdTeam] = await db.insert(teams).values(newTeam).returning();
@@ -218,7 +220,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     return createCheckoutSession({ team: createdTeam, priceId });
   }
 
-  redirect('/dashboard');
+  redirect('/app');
 });
 
 export async function signOut() {

@@ -2,13 +2,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
 
-const protectedRoutes = '/dashboard';
+const protectedRoutes = ['/dashboard', '/app'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
-  const isProtectedRoute = pathname.startsWith(protectedRoutes);
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+  const isDashboardRoute = pathname.startsWith('/dashboard');
 
+  // Redirect to sign-in if not authenticated and accessing protected route
   if (isProtectedRoute && !sessionCookie) {
     return NextResponse.redirect(new URL('/sign-in', request.url));
   }
@@ -19,6 +23,11 @@ export async function middleware(request: NextRequest) {
     try {
       const parsed = await verifyToken(sessionCookie.value);
       const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Check if user is admin for /dashboard routes
+      if (isDashboardRoute && !parsed.isAdmin) {
+        return NextResponse.redirect(new URL('/app', request.url));
+      }
 
       res.cookies.set({
         name: 'session',
@@ -31,8 +40,8 @@ export async function middleware(request: NextRequest) {
         sameSite: 'lax',
         expires: expiresInOneDay
       });
-    } catch (error) {
-      console.error('Error updating session:', error);
+    } catch {
+      console.error('Error updating session');
       res.cookies.delete('session');
       if (isProtectedRoute) {
         return NextResponse.redirect(new URL('/sign-in', request.url));

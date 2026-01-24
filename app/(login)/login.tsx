@@ -85,6 +85,28 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
             </div>
           </div>
 
+          {mode === 'signup' && (
+            <div>
+              <Label
+                htmlFor="organizationName"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Название организации
+              </Label>
+              <div className="mt-1">
+                <Input
+                  id="organizationName"
+                  name="organizationName"
+                  type="text"
+                  required
+                  maxLength={100}
+                  className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
+                  placeholder="ООО Smetalab"
+                />
+              </div>
+            </div>
+          )}
+
           {state?.error && (
             <div className="text-red-500 text-sm">{state?.error}</div>
           )}

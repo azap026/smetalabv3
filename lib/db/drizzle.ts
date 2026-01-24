@@ -11,5 +11,8 @@ if (!connectionString) {
   throw new Error('POSTGRES_URL or DATABASE_URL environment variable is not set');
 }
 
-export const client = postgres(connectionString);
+export const client = postgres(connectionString, {
+  prepare: false,
+  ssl: 'require',
+});
 export const db = drizzle(client, { schema });

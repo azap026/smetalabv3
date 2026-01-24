@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CreditCard, Database } from 'lucide-react';
 import { Terminal } from './terminal';
+import Link from 'next/link';
 
 export default function HomePage() {
   return (
@@ -18,19 +19,15 @@ export default function HomePage() {
                 management, and automated reporting. Built for engineers, by engineers.
               </p>
               <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
-                <a
-                  href="https://vercel.com/templates/next.js/next-js-saas-starter"
-                  target="_blank"
-                >
+                <Link href="/pricing">
                   <Button
                     size="lg"
-                    variant="outline"
-                    className="text-lg rounded-full"
+                    className="bg-orange-500 hover:bg-orange-600 text-white rounded-full text-lg px-8"
                   >
-                    Deploy your own
+                    Get Started
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
-                </a>
+                </Link>
               </div>
             </div>
             <div className="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6 lg:flex lg:items-center">

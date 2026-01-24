@@ -188,25 +188,28 @@ When you're ready to deploy your SaaS application to production, follow these st
 ### Set up a production Stripe webhook
 
 1. Go to the Stripe Dashboard and create a new webhook for your production environment.
-2. Set the endpoint URL to your production API route (e.g., `https://yourdomain.com/api/stripe/webhook`).
+2. Set the endpoint URL to your production API route (e.g., `https://your-app.onrender.com/api/stripe/webhook`).
 3. Select the events you want to listen for (e.g., `checkout.session.completed`, `customer.subscription.updated`).
 
-### Deploy to Vercel
+### Deploy to Render
 
-1. Push your code to a GitHub repository.
-2. Connect your repository to [Vercel](https://vercel.com/) and deploy it.
-3. Follow the Vercel deployment process, which will guide you through setting up your project.
+1. Create a new **Web Service** on [Render](https://render.com/).
+2. Connect your GitHub repository.
+3. Select **Node** as the environment.
+4. Set the **Build Command**: `pnpm install && pnpm build`
+5. Set the **Start Command**: `pnpm start`
+6. Add the following environment variables:
+   - `BASE_URL`: Your Render production URL (e.g., `https://smetalab-v2.onrender.com`).
+   - `POSTGRES_URL`: Your production database connection string.
+   - `AUTH_SECRET`: A random 32-character string.
+   - `STRIPE_SECRET_KEY`: Your production Stripe secret key.
+   - `STRIPE_WEBHOOK_SECRET`: The signing secret from your production webhook.
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Your production Stripe publishable key.
+   - `RESEND_API_KEY`: Your Resend API key.
 
-### Add environment variables
+### Automated Deploys
 
-In your Vercel project settings (or during deployment), add all the necessary environment variables. Make sure to update the values for the production environment, including:
-
-1. `BASE_URL`: Set this to your production domain.
-2. `STRIPE_SECRET_KEY`: Use your Stripe secret key for the production environment.
-3. `STRIPE_WEBHOOK_SECRET`: Use the webhook secret from the production webhook you created in step 1.
-4. `POSTGRES_URL`: Set this to your production database URL.
-5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
-6. `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Your Stripe publishable key for production.
+To enable automated deployments after CI passes, add your **Deploy Hook** from Render to your GitHub Repository Secrets as `RENDER_DEPLOY_HOOK_URL`.
 
 ## Other Templates
 

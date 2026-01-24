@@ -59,9 +59,6 @@ jobs:
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}"
       RESEND_API_KEY: "${{ secrets.RESEND_API_KEY }}"
       BASE_URL: "${{ secrets.BASE_URL }}"
-      VERCEL_TOKEN: "${{ secrets.VERCEL_TOKEN }}"
-      VERCEL_ORG_ID: "${{ secrets.VERCEL_ORG_ID }}"
-      VERCEL_PROJECT_ID: "${{ secrets.VERCEL_PROJECT_ID }}"
 
     steps:
       - uses: actions/checkout@v4
@@ -82,18 +79,6 @@ jobs:
 
       - name: Run Database Migrations
         run: pnpm db:migrate
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Pull Vercel Project Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Trigger Render Deployment
         env:

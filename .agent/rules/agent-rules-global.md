@@ -17,3 +17,13 @@ Safe Data Mutations: All create/update/delete operations (any data mutation) mus
 Linting and Tests for Changes: Any time code is updated or new code is added, corresponding linting rules and tests must be updated as well. If you introduce a new pattern or module, consider adding or adjusting ESLint rules to cover it. Likewise, write unit tests and integration tests for all new features or changes to ensure they work as expected. No code should be merged without appropriate test coverage and lint rules passing.
 
 Documentation Updates: For any changes to business logic, significant feature additions, modifications to CLI commands, database schema changes, or architecture updates, update the documentation accordingly. This especially includes the README.md (and any other relevant docs) to reflect the new behavior or requirements. Every non-trivial code change should be accompanied by a docs change so that the team and users have up-to-date information.
+
+**MANDATORY Pre-Commit Checklist**: Before EVERY `git commit` and `git push`, you MUST execute the workflow defined in `.agent/workflows/before-each-commit.md`. This includes:
+1. **Database Migrations**: Run `drizzle-kit generate` if schema changed, then `drizzle-kit push`
+2. **Lint**: Run `pnpm lint` — fix ALL errors
+3. **Type-Check**: Run `pnpm type-check` — fix ALL errors
+4. **Tests**: Run `pnpm test` — ALL tests must pass
+5. **Documentation**: Update README.md if architecture/features changed
+6. **File Cleanup**: Remove temporary/debug files (*.log, *.tmp, console.log statements)
+
+Do NOT skip any step. Do NOT commit with failing checks. This is NON-NEGOTIABLE.

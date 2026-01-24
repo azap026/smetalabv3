@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, Users, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -71,14 +71,23 @@ export function UserMenu() {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/dashboard')}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Профиль</span>
+                <DropdownMenuItem onClick={() => router.push('/app/team')}>
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>Команда</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/dashboard/general')}>
+                <DropdownMenuItem onClick={() => router.push('/app/settings')}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Настройки</span>
                 </DropdownMenuItem>
+                {user.isAdmin && (
+                    <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                            <Shield className="mr-2 h-4 w-4" />
+                            <span>Admin Panel</span>
+                        </DropdownMenuItem>
+                    </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />

@@ -46,6 +46,11 @@ const mainNavItems = [
         url: '/app/patterns',
         icon: Layers,
     },
+    {
+        title: 'Команда',
+        url: '/app/team',
+        icon: Users,
+    },
 ];
 
 const guideNavItems = [

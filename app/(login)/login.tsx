@@ -147,8 +147,11 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
 
           <div className="mt-6">
             <Link
-              href={`${mode === 'signin' ? '/sign-up' : '/sign-in'}${redirect ? `?redirect=${redirect}` : ''
-                }${priceId ? `&priceId=${priceId}` : ''}`}
+              href={`${mode === 'signin' ? '/sign-up' : '/sign-in'}?${new URLSearchParams({
+                ...(redirect ? { redirect } : {}),
+                ...(priceId ? { priceId } : {}),
+                ...(inviteId ? { inviteId } : {}),
+              }).toString()}`}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
             >
               {mode === 'signin'

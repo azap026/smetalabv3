@@ -48,24 +48,22 @@ async function logActivity(
 
 const signInSchema = z.object({
   email: z.string().email().min(3).max(255),
-  password: z.string().min(8).max(100)
+  password: z.string().min(8).max(100),
+  inviteId: z.string().optional()
 });
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
-  const { email, password } = data;
+  const { email, password, inviteId } = data;
 
-  const userWithTeam = await db
+  const userResult = await db
     .select({
       user: users,
-      team: teams
     })
     .from(users)
-    .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
-    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
     .where(eq(users.email, email))
     .limit(1);
 
-  if (userWithTeam.length === 0) {
+  if (userResult.length === 0) {
     return {
       error: 'Invalid email or password. Please try again.',
       email,
@@ -73,7 +71,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
-  const { user: foundUser, team: foundTeam } = userWithTeam[0];
+  const { user: foundUser } = userResult[0];
 
   const isPasswordValid = await comparePasswords(
     password,
@@ -87,6 +85,62 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       password
     };
   }
+
+  // Handle invitation during sign in
+  if (inviteId) {
+    const [invitation] = await db
+      .select()
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.id, parseInt(inviteId)),
+          eq(invitations.email, email),
+          eq(invitations.status, 'pending')
+        )
+      )
+      .limit(1);
+
+    if (invitation) {
+      // Check if already a member
+      const existingMember = await db
+        .select()
+        .from(teamMembers)
+        .where(
+          and(
+            eq(teamMembers.userId, foundUser.id),
+            eq(teamMembers.teamId, invitation.teamId)
+          )
+        )
+        .limit(1);
+
+      if (existingMember.length === 0) {
+        await db.insert(teamMembers).values({
+          userId: foundUser.id,
+          teamId: invitation.teamId,
+          role: invitation.role
+        });
+      }
+
+      await db
+        .update(invitations)
+        .set({ status: 'accepted' })
+        .where(eq(invitations.id, invitation.id));
+
+      await logActivity(invitation.teamId, foundUser.id, ActivityType.ACCEPT_INVITATION);
+    }
+  }
+
+  // Get current team (after potentially accepting invite)
+  const userWithTeam = await db
+    .select({
+      team: teams
+    })
+    .from(teamMembers)
+    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(eq(teamMembers.userId, foundUser.id))
+    .limit(1);
+
+  const foundTeam = userWithTeam[0]?.team;
 
   await Promise.all([
     setSession(foundUser),
@@ -120,7 +174,9 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   if (existingUser.length > 0) {
     return {
-      error: 'Failed to create user. Please try again.',
+      error: inviteId
+        ? 'У вас уже есть аккаунт. Пожалуйста, войдите в систему, чтобы принять приглашение.'
+        : 'Пользователь с таким email уже существует.',
       email,
       password
     };

@@ -11,7 +11,7 @@
     "db:reset-password": "npx tsx lib/db/reset-password.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
+    "db:studio": "drizzle-kit studio --host 127.0.0.1",
     "lint": "npx eslint .",
     "type-check": "tsc --noEmit",
     "test": "vitest run",

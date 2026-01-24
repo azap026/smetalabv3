@@ -7,36 +7,36 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.EMAIL_FROM || 'Smetalab <onboarding@resend.dev>';
 
 interface SendInvitationEmailParams {
-    to: string;
-    teamName: string;
-    role: string;
-    inviteId: number;
-    inviterEmail?: string;
+  to: string;
+  teamName: string;
+  role: string;
+  inviteId: number;
+  inviterEmail?: string;
 }
 
 const ROLE_LABELS: Record<string, string> = {
-    admin: 'Администратор',
-    estimator: 'Сметчик',
-    manager: 'Менеджер',
+  admin: 'Администратор',
+  estimator: 'Сметчик',
+  manager: 'Менеджер',
 };
 
 export async function sendInvitationEmail({
-    to,
-    teamName,
-    role,
-    inviteId,
-    inviterEmail,
+  to,
+  teamName,
+  role,
+  inviteId,
+  inviterEmail,
 }: SendInvitationEmailParams): Promise<{ success: boolean; error?: string }> {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    const inviteUrl = `${baseUrl}/sign-up?inviteId=${inviteId}`;
-    const roleLabel = ROLE_LABELS[role] || role;
+  const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+  const inviteUrl = `${baseUrl}/invitations?inviteId=${inviteId}`;
+  const roleLabel = ROLE_LABELS[role] || role;
 
-    try {
-        const { error } = await resend.emails.send({
-            from: FROM_EMAIL,
-            to: [to],
-            subject: `Приглашение в команду "${teamName}" — Smetalab`,
-            html: `
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [to],
+      subject: `Приглашение в команду "${teamName}" — Smetalab`,
+      html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -101,7 +101,7 @@ export async function sendInvitationEmail({
 </body>
 </html>
       `,
-            text: `
+      text: `
 Приглашение в команду "${teamName}"
 
 ${inviterEmail ? `${inviterEmail} приглашает вас` : 'Вас приглашают'} присоединиться к команде "${teamName}" в качестве ${roleLabel}.
@@ -113,16 +113,16 @@ ${inviteUrl}
 
 © ${new Date().getFullYear()} Smetalab
       `.trim(),
-        });
+    });
 
-        if (error) {
-            console.error('Email send error:', error);
-            return { success: false, error: error.message };
-        }
-
-        return { success: true };
-    } catch (err) {
-        console.error('Email send exception:', err);
-        return { success: false, error: 'Failed to send email' };
+    if (error) {
+      console.error('Email send error:', error);
+      return { success: false, error: error.message };
     }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Email send exception:', err);
+    return { success: false, error: 'Failed to send email' };
+  }
 }

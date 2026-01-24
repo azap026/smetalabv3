@@ -42,3 +42,4 @@ postgres_data/
 
 # bin
 /bin
+.env.test

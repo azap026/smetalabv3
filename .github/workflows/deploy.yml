@@ -1,12 +1,52 @@
-name: Deploy to Vercel
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_URL: "${{ secrets.POSTGRES_URL || 'postgresql://placeholder:placeholder@localhost:5432/placeholder' }}"
+      AUTH_SECRET: "${{ secrets.AUTH_SECRET || 'placeholder_auth_secret_for_ci' }}"
+      STRIPE_SECRET_KEY: "${{ secrets.STRIPE_SECRET_KEY || 'sk_test_placeholder' }}"
+      STRIPE_WEBHOOK_SECRET: "${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder' }}"
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder' }}"
+      RESEND_API_KEY: "${{ secrets.RESEND_API_KEY || 're_placeholder' }}"
+      BASE_URL: "${{ secrets.BASE_URL || 'http://localhost:3000' }}"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build check
+        run: pnpm build
+
   deploy:
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       POSTGRES_URL: "${{ secrets.POSTGRES_URL }}"

@@ -14,10 +14,10 @@ const mockGetUser = vi.mocked(getUser);
 const mockDb = vi.mocked(db, true);
 const mockHasPermission = vi.mocked(hasPermission);
 
-const mockUser = { id: 1, name: 'Test User', email: 'test@test.com', platformRole: 'user' };
-const mockAdminUser = { ...mockUser, platformRole: 'admin' };
-const mockSuperAdminUser = { ...mockUser, platformRole: 'superadmin' };
-const mockSupportUser = { ...mockUser, platformRole: 'support' };
+const mockUser = { id: 1, name: 'Test User', email: 'test@test.com', platformRole: 'user' } as any;
+const mockAdminUser = { ...mockUser, platformRole: 'admin' } as any;
+const mockSuperAdminUser = { ...mockUser, platformRole: 'superadmin' } as any;
+const mockSupportUser = { ...mockUser, platformRole: 'support' } as any;
 
 describe('Authentication Access Control', () => {
 
@@ -62,23 +62,21 @@ describe('Authentication Access Control', () => {
     describe('getUserTeamRole', () => {
         it("should return the user's role in a team", async () => {
             const mockMembership = [{ role: 'manager' }];
-            // @ts-expect-error Testing invalid role
             mockDb.select.mockReturnValue({
                 from: vi.fn().mockReturnThis(),
                 where: vi.fn().mockReturnThis(),
                 limit: vi.fn().mockResolvedValue(mockMembership),
-            });
+            } as any);
             const role = await getUserTeamRole(1, 101);
             expect(role).toBe('manager');
         });
 
         it('should return null if user is not in the team', async () => {
-            // @ts-expect-error Testing invalid role
             mockDb.select.mockReturnValue({
                 from: vi.fn().mockReturnThis(),
                 where: vi.fn().mockReturnThis(),
                 limit: vi.fn().mockResolvedValue([]),
-            });
+            } as any);
             const role = await getUserTeamRole(1, 101);
             expect(role).toBeNull();
         });
@@ -105,12 +103,11 @@ describe('Authentication Access Control', () => {
         it('should resolve tenantId if not provided and grant access', async () => {
             mockGetUser.mockResolvedValue(mockUser);
             const mockMembership = [{ teamId: 102 }];
-            // @ts-expect-error Testing invalid role
             mockDb.select.mockReturnValue({
                 from: vi.fn().mockReturnThis(),
                 where: vi.fn().mockReturnThis(),
                 limit: vi.fn().mockResolvedValue(mockMembership),
-            });
+            } as any);
             mockHasPermission.mockResolvedValue(true);
 
             const result = await checkAccess('estimates.create');
@@ -123,12 +120,11 @@ describe('Authentication Access Control', () => {
         it('should return tenantId as null if not provided and not found', async () => {
             mockGetUser.mockResolvedValue(mockUser);
             mockHasPermission.mockResolvedValue(false);
-            // @ts-expect-error Testing invalid role
             mockDb.select.mockReturnValue({
                 from: vi.fn().mockReturnThis(),
                 where: vi.fn().mockReturnThis(),
                 limit: vi.fn().mockResolvedValue([]),
-            });
+            } as any);
 
             const result = await checkAccess('estimates.create');
 

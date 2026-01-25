@@ -5,11 +5,11 @@ import { hasPermission } from '@/lib/auth/rbac';
 import { sql } from 'drizzle-orm';
 
 // --- Test Data ---
-const testUser = { id: 1, name: 'Test User', email: 'test@test.com', platformRole: null, passwordHash: 'hash' };
-const testAdmin = { id: 2, name: 'Admin User', email: 'admin@test.com', platformRole: null, passwordHash: 'hash' };
-const testTeam = { id: 101, name: 'Test Team' };
-const testPermission = { id: 1, name: 'Create Estimates', code: 'estimates.create', scope: 'tenant', description: 'Create estimates' };
-const testRolePermission = { role: 'admin', permissionId: 1, accessLevel: 'manage' };
+const testUser = { id: 1, name: 'Test User', email: 'test@test.com', platformRole: null, passwordHash: 'hash' } as any;
+const testAdmin = { id: 2, name: 'Admin User', email: 'admin@test.com', platformRole: null, passwordHash: 'hash' } as any;
+const testTeam = { id: 101, name: 'Test Team' } as any;
+const testPermission = { id: 1, name: 'Create Estimates', code: 'estimates.create', scope: 'tenant', description: 'Create estimates' } as any;
+const testRolePermission = { role: 'admin', permissionId: 1, accessLevel: 'manage' } as any;
 
 describe('RBAC Integration Tests', () => {
 

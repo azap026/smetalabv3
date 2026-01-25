@@ -21,7 +21,7 @@ export default function AppHomePage() {
             {/* FLEX */}
             <section>
                 <h3 className="text-lg font-semibold mb-4">Flex</h3>
-                <div className="flex gap-4">
+                <div className="flex flex-col md:flex-row gap-4">
                     <Card>
                         <CardHeader><CardTitle>Карточка 1</CardTitle></CardHeader>
                         <CardContent><p>Контент</p></CardContent>
@@ -42,7 +42,7 @@ export default function AppHomePage() {
             {/* GRID */}
             <section>
                 <h3 className="text-lg font-semibold mb-4">Grid</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card>
                         <CardHeader><CardTitle>Карточка 1</CardTitle></CardHeader>
                         <CardContent><p>Контент</p></CardContent>

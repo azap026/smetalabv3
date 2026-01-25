@@ -1,8 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
 
-// Load env variables for baseUrl
-dotenv.config();
+require('dotenv').config({ path: require('path').resolve(process.cwd(), '.env') });
 
 export default defineConfig({
     testDir: './__tests__/e2e',

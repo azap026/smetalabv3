@@ -1,7 +1,7 @@
 export default function Page() {
   return (
     <div>
-      {/* TODO: Page: /dashboard */}
+      <h1>Админка</h1>
     </div>
   );
 }

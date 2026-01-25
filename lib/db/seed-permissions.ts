@@ -66,23 +66,31 @@ async function seedPermissions() {
     const permissionMap = new Map(allPermissions.map(p => [p.code, p.id]));
 
     // 2. Tenant roles
+    const allTenantPermissions: typeof rolePermissions.$inferInsert[] = [];
     for (const [role, features] of Object.entries(TENANT_ROLE_PERMISSIONS)) {
         const values = Object.entries(features).map(([code, level]) => ({
             role: role as TenantRole,
             permissionId: permissionMap.get(code)!,
             accessLevel: level as 'read' | 'manage'
         }));
-        if (values.length > 0) await db.insert(rolePermissions).values(values);
+        allTenantPermissions.push(...values);
+    }
+    if (allTenantPermissions.length > 0) {
+        await db.insert(rolePermissions).values(allTenantPermissions);
     }
 
     // 3. Platform roles
+    const allPlatformPermissions: typeof platformRolePermissions.$inferInsert[] = [];
     for (const [role, features] of Object.entries(PLATFORM_ROLE_PERMISSIONS)) {
         const values = Object.entries(features).map(([code, level]) => ({
             platformRole: role as PlatformRole,
             permissionId: permissionMap.get(code)!,
             accessLevel: level as 'read' | 'manage'
         }));
-        if (values.length > 0) await db.insert(platformRolePermissions).values(values);
+        allPlatformPermissions.push(...values);
+    }
+    if (allPlatformPermissions.length > 0) {
+        await db.insert(platformRolePermissions).values(allPlatformPermissions);
     }
 
     console.log('✅ 3-state permissions seeded successfully!');

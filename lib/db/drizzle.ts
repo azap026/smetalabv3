@@ -13,6 +13,6 @@ if (!connectionString) {
 
 export const client = postgres(connectionString, {
   prepare: false,
-  ssl: 'require',
+  ssl: process.env.CI || connectionString.includes('localhost') ? false : 'require',
 });
 export const db = drizzle(client, { schema });

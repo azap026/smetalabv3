@@ -12,6 +12,10 @@ export async function middleware(request: NextRequest) {
   );
   const isDashboardRoute = pathname.startsWith('/dashboard');
 
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/sign-in', request.url));
+  }
+
   // Redirect to sign-in if not authenticated and accessing protected route
   if (isProtectedRoute && !sessionCookie) {
     return NextResponse.redirect(new URL('/sign-in', request.url));

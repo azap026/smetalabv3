@@ -24,6 +24,7 @@ Smetalab is a SaaS application built with Next.js, Postgres, Drizzle, and Stripe
   - `lib/auth/`: Authentication logic and RBAC.
   - `lib/payments/`: Stripe integration.
 - `drizzle/`: Database migrations.
+- `__tests__/`: Complete testing suite (Unit, Integration, E2E).
 
 ## Strict Rules (MANDATORY)
 1. **Architecture**: Follow Next.js App Router rules. Use "use client" only when necessary. Keep clear separation between client and server logic.
@@ -38,16 +39,36 @@ Smetalab is a SaaS application built with Next.js, Postgres, Drizzle, and Stripe
    - Components: `PascalCase`
    - Hooks: `camelCase`
    - Database tables: `snake_case`
-10. **Cleanup**: Before every commit, remove temporary, unused, or debug files (logs, tmp, console.log).
+10. **Testing (CRITICAL)**: **Every new feature, page, or API endpoint must be accompanied by corresponding tests.** You are NOT allowed to push code that reduces test coverage or leaves new logic untested.
+11. **Cleanup**: Before every commit, remove temporary, unused, or debug files (logs, tmp, console.log).
 
-## Workflow Commands
-- **Install Dependencies**: `pnpm install`
-- **Database Migration**: `pnpm db:generate` then `pnpm db:migrate`
-- **Seed Permissions**: `pnpm db:seed:permissions`
-- **Run Development**: `pnpm dev`
-- **Lint**: `pnpm lint`
-- **Type Check**: `pnpm type-check`
-- **Test**: `pnpm test`
+## Testing Standards
+The project uses Vitest for Unit/Integration and Playwright for E2E.
+
+### 1. Unit Tests (`__tests__/unit/`)
+- Target: Individual functions, utility libs, and simple UI components.
+- Rule: Cover edge cases and error handling.
+- Command: `pnpm test`
+
+### 2. Integration Tests (`__tests__/integration/`)
+- Target: API routes, database queries, and complex RBAC logic.
+- Rule: Test interaction with the database (use mock data where necessary, or local Postgres).
+- Command: `pnpm test`
+
+### 3. End-to-End Tests (`__tests__/e2e/`)
+- Target: Full user scenarios (Login, Registration, Stripe flow, Team Management).
+- Rule: Must run against a production build in CI. Ensure redirect logic and UI visibility are verified.
+- Command: `pnpm test:e2e`
+
+## Pre-Push Protocol (MANDATORY Checklist)
+Before proposing a push or finishing a task, you MUST execute:
+1. `pnpm lint` — Fix all linting errors.
+2. `pnpm type-check` — Fix all TypeScript errors.
+3. `pnpm test` — Ensure all unit/integration tests pass.
+4. `pnpm db:seed` — Populate database for E2E.
+5. `pnpm test:e2e` — Ensure all browser scenarios pass.
+6. **Sync Documentation**: Update README.md if architecture or features changed.
+7. **File Inventory**: Remove `test_output.txt`, `.tmp`, and any other temporary artifacts.
 
 ## Important Context
 - All payment logic is encapsulated in `lib/payments/`.

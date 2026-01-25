@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers, permissions, rolePermissions, platformRolePermissions, activityLogs, invitations, estimateShares, impersonationSessions } from '@/lib/db/schema';
 import { hasPermission } from '@/lib/auth/rbac';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 
 // --- Test Data ---
 const testUser = { id: 1, name: 'Test User', email: 'integration-test@test.com', platformRole: null, passwordHash: 'hash' } as any;
@@ -24,16 +24,23 @@ describe('RBAC Integration Tests', () => {
 
     beforeEach(async () => {
         // Clean all relevant tables before each test in the correct order
+        // Clean only test-specific data to avoid affecting real users
         await db.delete(impersonationSessions);
         await db.delete(estimateShares);
         await db.delete(invitations);
         await db.delete(activityLogs);
-        await db.delete(teamMembers);
-        await db.delete(users);
-        await db.delete(teams);
-        await db.delete(platformRolePermissions);
-        await db.delete(rolePermissions);
-        await db.delete(permissions);
+
+        // Targeted cleanup using raw SQL for reliability in tests
+        await db.execute(sql`DELETE FROM team_members WHERE user_id IN (SELECT id FROM users WHERE email IN ('integration-test@test.com', 'integration-admin@test.com'))`);
+        await db.execute(sql`DELETE FROM users WHERE email IN ('integration-test@test.com', 'integration-admin@test.com')`);
+        await db.execute(sql`DELETE FROM teams WHERE name = 'Test Team'`);
+
+        // Seed necessary permissions only if they don't exist
+        const [existingPerm] = await db.select().from(permissions).where(eq(permissions.code, 'estimates.create')).limit(1);
+        if (!existingPerm) {
+            await db.insert(permissions).values(testPermission);
+            await db.insert(rolePermissions).values(testRolePermission);
+        }
 
 
         // Seed necessary data for the tests

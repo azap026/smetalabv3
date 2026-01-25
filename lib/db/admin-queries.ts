@@ -1,5 +1,5 @@
 import { db } from './drizzle';
-import { teams, teamMembers, users } from './schema';
+import { teams, teamMembers } from './schema';
 import { desc, sql } from 'drizzle-orm';
 
 export async function getAllTeams() {

@@ -7,10 +7,6 @@ interface PermissionEntry {
     level: 'read' | 'manage';
 }
 
-interface UsePermissionsOptions {
-    tenantId?: number;
-}
-
 interface UsePermissionsResult {
     permissions: PermissionEntry[];
     loading: boolean;
@@ -20,7 +16,7 @@ interface UsePermissionsResult {
     hasAnyPermission: (...codes: string[]) => boolean;
 }
 
-export function usePermissions(options: UsePermissionsOptions = {}): UsePermissionsResult {
+export function usePermissions(): UsePermissionsResult {
     const [permissions, setPermissions] = useState<PermissionEntry[]>([]);
     const [loading, setLoading] = useState(true);
 

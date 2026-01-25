@@ -35,16 +35,12 @@ export async function GET() {
     .where(eq(users.id, user.id));
 
   const teamId = result[0]?.teamId ?? null;
-  const userPermissions = result
-    .filter(r => r.permissionCode)
-    .map(r => ({ code: r.permissionCode!, level: r.accessLevel! }));
-
-  // Also need platform permissions if any
-  const platformPerms = await getUserPermissions(user.id, teamId);
+  // Get all permissions correctly (platform + tenant) with levels
+  const userPermissions = await getUserPermissions(user.id, teamId);
 
   return Response.json({
     ...user,
     teamId,
-    permissions: platformPerms // getUserPermissions already caches and handles everything
+    permissions: userPermissions
   });
 }

@@ -78,6 +78,8 @@ export async function getUserWithTeam(userId: number) {
   return result[0];
 }
 
+
+
 export async function getActivityLogs() {
   const user = await getUser();
   if (!user) {

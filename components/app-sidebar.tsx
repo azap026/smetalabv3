@@ -17,7 +17,6 @@ import {
     Home,
     ShoppingCart,
     Layers,
-    BookOpen,
     Wrench,
     Package,
     Users,

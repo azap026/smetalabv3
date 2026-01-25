@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db/drizzle';
-import { invitations, teamMembers, ActivityType, activityLogs, users } from '@/lib/db/schema';
+import { invitations, teamMembers, activityLogs, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getUser } from '@/lib/db/queries';
 

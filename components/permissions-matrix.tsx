@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shield, Users, Building2, Settings2, Eye, Edit3, XCircle } from 'lucide-react';
+import { Users, Building2, Settings2, Eye, Edit3, XCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Permission {
@@ -31,12 +30,6 @@ const ROLE_LABELS: Record<string, string> = {
     manager: 'Менеджер',
     superadmin: 'Суперадмин',
     support: 'Поддержка',
-};
-
-const MODE_COLORS = {
-    none: 'bg-gray-50 text-gray-400 border-transparent',
-    read: 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm',
-    manage: 'bg-orange-50 text-orange-600 border-orange-200 shadow-sm',
 };
 
 export function PermissionsMatrix() {

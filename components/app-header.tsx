@@ -10,7 +10,7 @@ export function AppHeader() {
     const pageTitle = usePageTitle();
 
     return (
-        <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background px-6">
+        <header className="flex h-14 shrink-0 items-center gap-4 border-b bg-background px-4 md:px-6">
             <SidebarTrigger className="-ml-2" />
             <Separator orientation="vertical" className="h-6" />
             <div className="flex-1">

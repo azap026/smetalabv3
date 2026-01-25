@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication & Basic Navigation', () => {
-    test('should show landing page', async ({ page }) => {
+    test('should redirect root to sign-in', async ({ page }) => {
         await page.goto('/');
-        await expect(page).toHaveTitle(/Smetalab/i);
-        await expect(page.getByText(/Smart Engineering/i)).toBeVisible();
+        await expect(page).toHaveURL(/.*sign-in/);
+        await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
     });
 
     test('should redirect unauthenticated user to sign-in from dashboard', async ({ page }) => {
@@ -44,16 +44,17 @@ test.describe('Authentication & Basic Navigation', () => {
         await page.waitForURL(/\/app(\/.*)?$/, { timeout: 20000 });
         await expect(page.getByRole('link', { name: /Главная/i })).toBeVisible({ timeout: 15000 });
 
-        // Open User Menu (The button with initials or avatar)
-        // In Shadcn, it's often a button with a class 'rounded-full' containing an avatar
-        await page.locator('button.rounded-full').last().click();
+        // Open User Menu
+        // Improved selector: specifically find the avatar button in the header
+        await page.locator('header button.rounded-full').click();
 
         // Wait for dropdown and click Logout
         const logoutItem = page.getByRole('menuitem', { name: /Выйти/i });
         await expect(logoutItem).toBeVisible({ timeout: 5000 });
         await logoutItem.click();
 
-        // Should redirect back to landing or sign-in
-        await page.waitForURL(url => url.pathname === '/' || url.pathname === '/sign-in', { timeout: 20000 });
+        // Should redirect back to sign-in
+        await page.waitForURL(url => url.pathname === '/sign-in', { timeout: 20000 });
+        await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
     });
 });

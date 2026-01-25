@@ -1,0 +1,170 @@
+
+> @ test:e2e C:\Users\kiy02\Desktop\Smetalab v1.0.2
+> playwright test
+
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m> @ dev:next C:\Users\kiy02\Desktop\Smetalab v1.0.2
+[2m[WebServer] [22m> next dev --turbopack
+[2m[WebServer] [22m
+
+[1A[2K[2m[WebServer] [22m[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+
+[1A[2K[2m[WebServer] [22m   [1m[38;2;173;127;168m▲ Next.js 15.6.0-canary.59[39m[22m (Turbopack)
+
+[1A[2K[2m[WebServer] [22m   - Local:        http://localhost:3000
+[2m[WebServer] [22m   - Network:      http://169.254.83.107:3000
+[2m[WebServer] [22m   - Environments: .env
+[2m[WebServer] [22m
+[2m[WebServer] [22m [32m[1m✓[22m[39m Starting...
+
+[1A[2K[2m[WebServer] [22m [32m[1m✓[22m[39m Compiled middleware in 191ms
+
+[1A[2K[2m[WebServer] [22m [33m[1m⚠[22m[39m The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+[1A[2K[2m[WebServer] [22m [32m[1m✓[22m[39m Ready in 1460ms
+
+[1A[2K[2m[WebServer] [22mMW: /
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K[2m[WebServer] [22m [37m[1m○[22m[39m Compiling /sign-in ...
+
+[1A[2K[2m[WebServer] [22m [32m[1m✓[22m[39m Compiled /sign-in in 3.4s
+
+[1A[2K[2m[WebServer] [22m GET /sign-in [32m200[39m in 3919ms
+
+
+Running 4 tests using 4 workers
+
+[1A[2K[1/4] [chromium] › __tests__\e2e\auth.spec.ts:4:9 › Authentication & Basic Navigation › should redirect root to sign-in
+[1A[2K[2/4] [chromium] › __tests__\e2e\auth.spec.ts:15:9 › Authentication & Basic Navigation › should login successfully with test credentials
+[1A[2K[3/4] [chromium] › __tests__\e2e\auth.spec.ts:10:9 › Authentication & Basic Navigation › should redirect unauthenticated user to sign-in from dashboard
+[1A[2K[4/4] [chromium] › __tests__\e2e\auth.spec.ts:38:9 › Authentication & Basic Navigation › should allow logout after login
+[1A[2K[2m[WebServer] [22mMW: /app
+
+[1A[2K[2m[WebServer] [22mMW: /
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K[2m[WebServer] [22m GET /sign-in [32m200[39m in 706ms
+
+[1A[2K[2m[WebServer] [22m GET /sign-in [32m200[39m in 710ms
+
+[1A[2K[2m[WebServer] [22m GET /sign-in [32m200[39m in 648ms
+
+[1A[2K[2m[WebServer] [22m GET /sign-in [32m200[39m in 426ms
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K  1) [chromium] › __tests__\e2e\auth.spec.ts:4:9 › Authentication & Basic Navigation › should redirect root to sign-in 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/Sign in/i)
+    Expected: visible
+    Error: strict mode violation: getByText(/Sign in/i) resolved to 2 elements:
+        1) <div data-slot="card-title" class="text-3xl font-extrabold">Sign in to your account</div> aka getByText('Sign in to your account')
+        2) <button type="submit" data-slot="button" data-size="default" data-variant="default" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 ari…>Sign in</button> aka getByRole('button', { name: 'Sign in' })
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByText(/Sign in/i)[22m
+
+
+       5 |         await page.goto('/');
+       6 |         await expect(page).toHaveURL(/.*sign-in/);
+    >  7 |         await expect(page.getByText(/Sign in/i)).toBeVisible();
+         |                                                  ^
+       8 |     });
+       9 |
+      10 |     test('should redirect unauthenticated user to sign-in from dashboard', async ({ page }) => {
+        at C:\Users\kiy02\Desktop\Smetalab v1.0.2\__tests__\e2e\auth.spec.ts:7:50
+
+    Error Context: test-results\auth-Authentication-Basic--218d1-ld-redirect-root-to-sign-in-chromium\error-context.md
+
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K[2m[WebServer] [22m [32m[1m✓[22m[39m Compiled in 201ms
+
+[1A[2K[2m[WebServer] [22mMW: /app
+
+[1A[2K[2m[WebServer] [22mMW: /app
+
+[1A[2K[2m[WebServer] [22m [37m[1m○[22m[39m Compiling /app ...
+
+[1A[2K[2m[WebServer] [22m [32m[1m✓[22m[39m Compiled /app in 767ms
+
+[1A[2K[2m[WebServer] [22m GET /app [32m200[39m in 901ms
+
+[1A[2K[2m[WebServer] [22m POST /sign-in [34m303[39m in 4011ms
+
+[1A[2K[2m[WebServer] [22m [32m[1m✓[22m[39m Compiled /api/user in 346ms
+
+[1A[2K[2m[WebServer] [22m GET /app [32m200[39m in 3808ms
+
+[1A[2K[2m[WebServer] [22m POST /sign-in [34m303[39m in 6288ms
+
+[1A[2K[2m[WebServer] [22m GET /api/user [32m200[39m in 3264ms
+
+[1A[2K[2m[WebServer] [22m GET /api/user [32m200[39m in 736ms
+
+[1A[2K[2m[WebServer] [22m GET /api/user [32m200[39m in 3365ms
+
+[1A[2K[2m[WebServer] [22mMW: /app
+
+[1A[2K[2m[WebServer] [22m GET /api/user [32m200[39m in 1297ms
+
+[1A[2K[2m[WebServer] [22m POST /app [32m200[39m in 1148ms
+
+[1A[2K[2m[WebServer] [22mMW: /
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K[2m[WebServer] [22m GET /sign-in [34m307[39m in 7ms
+
+[1A[2K[2m[WebServer] [22mMW: /sign-in
+
+[1A[2K[2m[WebServer] [22m GET /sign-in [32m200[39m in 28ms
+
+[1A[2K[2m[WebServer] [22m GET /api/user [32m200[39m in 982ms
+
+[1A[2K  2) [chromium] › __tests__\e2e\auth.spec.ts:38:9 › Authentication & Basic Navigation › should allow logout after login 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: getByText(/Sign in/i)
+    Expected: visible
+    Error: strict mode violation: getByText(/Sign in/i) resolved to 2 elements:
+        1) <div data-slot="card-title" class="text-3xl font-extrabold">Sign in to your account</div> aka getByText('Sign in to your account')
+        2) <button type="submit" data-slot="button" data-size="default" data-variant="default" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 ari…>Sign in</button> aka getByRole('button', { name: 'Sign in' })
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for getByText(/Sign in/i)[22m
+
+
+      56 |         // Should redirect back to sign-in
+      57 |         await page.waitForURL(url => url.pathname === '/sign-in', { timeout: 20000 });
+    > 58 |         await expect(page.getByText(/Sign in/i)).toBeVisible();
+         |                                                  ^
+      59 |     });
+      60 | });
+      61 |
+        at C:\Users\kiy02\Desktop\Smetalab v1.0.2\__tests__\e2e\auth.spec.ts:58:50
+
+    Error Context: test-results\auth-Authentication-Basic--caaa3-ld-allow-logout-after-login-chromium\error-context.md
+
+
+[1A[2K  2 failed
+    [chromium] › __tests__\e2e\auth.spec.ts:4:9 › Authentication & Basic Navigation › should redirect root to sign-in 
+    [chromium] › __tests__\e2e\auth.spec.ts:38:9 › Authentication & Basic Navigation › should allow logout after login 
+  2 passed (23.8s)
+
+[36m  Serving HTML report at http://localhost:54966. Press Ctrl+C to quit.[39m

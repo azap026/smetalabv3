@@ -5,7 +5,8 @@ import {
     permissions,
     rolePermissions,
     platformRolePermissions,
-    impersonationSessions
+    impersonationSessions,
+    type User
 } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { cache } from 'react';
@@ -136,18 +137,26 @@ export const hasPermission = cache(async function (
  * Useful for building the UI (menu visibility, etc).
  */
 export const getUserPermissions = cache(async function (
-    userId: number,
+    userIdOrUser: number | User,
     tenantId: number | null,
     ctx?: { impersonationSessionId?: string }
 ): Promise<Array<{ code: string; level: 'read' | 'manage' }>> {
-    const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
+    let user: User | undefined;
+
+    if (typeof userIdOrUser === 'number') {
+        const [u] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, userIdOrUser))
+            .limit(1);
+        user = u;
+    } else {
+        user = userIdOrUser;
+    }
 
     if (!user) return [];
 
+    const userId = user.id;
     const permsMap = new Map<string, 'read' | 'manage'>();
 
     // 1. Get Platform Permissions

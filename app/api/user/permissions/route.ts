@@ -33,7 +33,7 @@ export async function GET(request: Request) {
             }
         }
 
-        const permissions = await getUserPermissions(user.id, tenantId);
+        const permissions = await getUserPermissions(user, tenantId);
 
         return NextResponse.json({
             permissions,

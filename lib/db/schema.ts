@@ -20,6 +20,7 @@ export const platformRoleEnum = pgEnum('platform_role', ['superadmin', 'support'
 export const tenantRoleEnum = pgEnum('tenant_role', ['admin', 'estimator', 'manager']);
 export const permissionScopeEnum = pgEnum('permission_scope', ['platform', 'tenant']);
 export const accessLevelEnum = pgEnum('access_level', ['view', 'comment', 'download']);
+export const rbacLevelEnum = pgEnum('rbac_level', ['none', 'read', 'manage']);
 
 // ═══════════════════════════════════════════════════════════════
 // USERS
@@ -96,6 +97,7 @@ export const rolePermissions = pgTable('role_permissions', {
   permissionId: integer('permission_id')
     .notNull()
     .references(() => permissions.id),
+  accessLevel: rbacLevelEnum('access_level').notNull().default('read'),
 }, (table) => [
   uniqueIndex('role_permissions_unique').on(table.role, table.permissionId),
 ]);
@@ -110,6 +112,7 @@ export const platformRolePermissions = pgTable('platform_role_permissions', {
   permissionId: integer('permission_id')
     .notNull()
     .references(() => permissions.id),
+  accessLevel: rbacLevelEnum('access_level').notNull().default('manage'),
 }, (table) => [
   uniqueIndex('platform_role_permissions_unique').on(table.platformRole, table.permissionId),
 ]);

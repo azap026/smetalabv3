@@ -24,15 +24,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-import useSWR from 'swr';
-import { User as UserType } from '@/lib/db/schema';
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-type UserWithPermissions = UserType & {
-    permissions: string[];
-};
+import { usePermissions } from '@/hooks/use-permissions';
 
 const mainNavItems = [
     {
@@ -44,7 +36,7 @@ const mainNavItems = [
         title: 'Проекты',
         url: '/app/projects',
         icon: FolderKanban,
-        requiredPermission: 'projects.view',
+        requiredPermission: 'projects',
     },
     {
         title: 'Закупки',
@@ -60,42 +52,46 @@ const mainNavItems = [
         title: 'Команда',
         url: '/app/team',
         icon: Users,
-        requiredPermission: 'team.view',
+        requiredPermission: 'team',
     },
 ];
 
 const guideNavItems = [
     {
-        title: 'Справочник',
-        url: '/app/guide',
-        icon: BookOpen,
-    },
-    {
         title: 'Работы',
         url: '/app/guide/works',
         icon: Wrench,
+        requiredPermission: 'guide',
     },
     {
         title: 'Материалы',
         url: '/app/guide/materials',
         icon: Package,
+        requiredPermission: 'guide',
     },
     {
         title: 'Контрагенты',
         url: '/app/guide/counterparties',
         icon: Users,
+        requiredPermission: 'guide',
     },
 ];
 
 export function AppSidebar() {
     const pathname = usePathname();
-    const { data: user } = useSWR<UserWithPermissions>('/api/user', fetcher);
+    const { hasPermission, loading } = usePermissions();
 
-    const filteredNavItems = mainNavItems.filter((item) => {
-        if (!item.requiredPermission) return true;
-        if (user?.isAdmin) return true;
-        return user?.permissions?.includes(item.requiredPermission);
-    });
+    if (loading) return null;
+
+    const filterItems = (items: typeof mainNavItems) => {
+        return items.filter((item) => {
+            if (!item.requiredPermission) return true;
+            return hasPermission(item.requiredPermission, 'read');
+        });
+    };
+
+    const filteredMainNavItems = filterItems(mainNavItems);
+    const filteredGuideNavItems = filterItems(guideNavItems);
 
     return (
         <Sidebar>
@@ -108,47 +104,50 @@ export function AppSidebar() {
                 </div>
             </SidebarHeader>
             <SidebarContent>
-                <SidebarGroup>
-                    <SidebarGroupLabel>Навигация</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {filteredNavItems.map((item) => (
-                                <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild isActive={pathname === item.url}>
-                                        <Link href={item.url}>
-                                            <item.icon />
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-                <SidebarGroup>
-                    <SidebarGroupLabel>Справочники</SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {guideNavItems.map((item) => (
-                                <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton
-                                        asChild
-                                        isActive={pathname === item.url}
-                                    >
-                                        <Link href={item.url}>
-                                            <item.icon />
-                                            <span>{item.title}</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                {filteredMainNavItems.length > 0 && (
+                    <SidebarGroup>
+                        <SidebarGroupLabel>Навигация</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {filteredMainNavItems.map((item) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton asChild isActive={pathname === item.url}>
+                                            <Link href={item.url}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                )}
+
+                {filteredGuideNavItems.length > 0 && (
+                    <SidebarGroup>
+                        <SidebarGroupLabel>Справочники</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {filteredGuideNavItems.map((item) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={pathname === item.url}
+                                        >
+                                            <Link href={item.url}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                )}
             </SidebarContent>
-            <SidebarFooter>
-                {/* User menu is in layout.tsx header typically, but footer can have it too */}
-            </SidebarFooter>
+            <SidebarFooter />
         </Sidebar>
     );
 }

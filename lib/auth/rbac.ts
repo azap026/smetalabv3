@@ -8,15 +8,17 @@ import {
     impersonationSessions
 } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
+import { cache } from 'react';
 
 /**
  * Checks if a user has a specific permission.
  * Handles both platform-level and tenant-level scopes.
  */
-export async function hasPermission(
+export const hasPermission = cache(async function (
     userId: number,
     tenantId: number | null,
     permissionCode: string,
+    requiredLevel: 'read' | 'manage' = 'read',
     ctx?: { impersonationSessionId?: string }
 ): Promise<boolean> {
     // 1. Fetch permission definition
@@ -55,7 +57,12 @@ export async function hasPermission(
             )
             .limit(1);
 
-        return !!rolePerm;
+        if (!rolePerm) return false;
+
+        // Level check: 'manage' > 'read'
+        if (requiredLevel === 'manage' && rolePerm.accessLevel !== 'manage') return false;
+
+        return true;
     }
 
     // --- TENANT SCOPE ---
@@ -113,21 +120,26 @@ export async function hasPermission(
             )
             .limit(1);
 
-        return !!rolePerm;
+        if (!rolePerm) return false;
+
+        // Level check: 'manage' > 'read'
+        if (requiredLevel === 'manage' && rolePerm.accessLevel !== 'manage') return false;
+
+        return true;
     }
 
     return false;
-}
+});
 
 /**
  * Helper to get all permissions for a user in a specific context.
  * Useful for building the UI (menu visibility, etc).
  */
-export async function getUserPermissions(
+export const getUserPermissions = cache(async function (
     userId: number,
     tenantId: number | null,
     ctx?: { impersonationSessionId?: string }
-): Promise<string[]> {
+): Promise<Array<{ code: string; level: 'read' | 'manage' }>> {
     const [user] = await db
         .select()
         .from(users)
@@ -136,28 +148,35 @@ export async function getUserPermissions(
 
     if (!user) return [];
 
-    const perms: string[] = [];
+    const permsMap = new Map<string, 'read' | 'manage'>();
 
     // 1. Get Platform Permissions
     if (user.platformRole) {
         const platformPerms = await db
-            .select({ code: permissions.code })
+            .select({
+                code: permissions.code,
+                level: platformRolePermissions.accessLevel
+            })
             .from(platformRolePermissions)
             .innerJoin(permissions, eq(platformRolePermissions.permissionId, permissions.id))
             .where(eq(platformRolePermissions.platformRole, user.platformRole));
 
-        perms.push(...platformPerms.map(p => p.code));
+        for (const p of platformPerms) {
+            permsMap.set(p.code, p.level as 'read' | 'manage');
+        }
     }
 
     // 2. Get Tenant Permissions
     if (user.platformRole === 'superadmin' && ctx?.impersonationSessionId) {
-        // Superadmin in impersonation sees all tenant permissions
+        // Superadmin in impersonation sees all tenant permissions with 'manage' level
         const tenantPerms = await db
             .select({ code: permissions.code })
             .from(permissions)
             .where(eq(permissions.scope, 'tenant'));
 
-        perms.push(...tenantPerms.map(p => p.code));
+        for (const p of tenantPerms) {
+            permsMap.set(p.code, 'manage');
+        }
     } else if (tenantId) {
         const [member] = await db
             .select()
@@ -167,14 +186,23 @@ export async function getUserPermissions(
 
         if (member) {
             const tenantPerms = await db
-                .select({ code: permissions.code })
+                .select({
+                    code: permissions.code,
+                    level: rolePermissions.accessLevel
+                })
                 .from(rolePermissions)
                 .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
                 .where(eq(rolePermissions.role, member.role));
 
-            perms.push(...tenantPerms.map(p => p.code));
+            for (const p of tenantPerms) {
+                // If a permission exists from multiple sources, choose highest level
+                const existing = permsMap.get(p.code);
+                if (!existing || p.level === 'manage') {
+                    permsMap.set(p.code, p.level as 'read' | 'manage');
+                }
+            }
         }
     }
 
-    return [...new Set(perms)];
-}
+    return Array.from(permsMap.entries()).map(([code, level]) => ({ code, level }));
+});

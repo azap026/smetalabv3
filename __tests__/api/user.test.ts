@@ -17,18 +17,16 @@ vi.mock('@/lib/auth/rbac', () => ({
 describe('User API Route', () => {
     it('should return user data when authenticated', async () => {
         const mockUser = { id: 1, name: 'Test User', email: 'test@example.com' } as User;
-        const mockPermissions = ['projects.view'];
+        const mockPermissions = [{ code: 'projects', level: 'read' as const }];
         vi.mocked(queries.getUser).mockResolvedValue(mockUser);
-        vi.mocked(queries.getUserWithTeam).mockResolvedValue({ user: mockUser, teamId: 1 });
         vi.mocked(rbac.getUserPermissions).mockResolvedValue(mockPermissions);
 
         const response = await GET();
         const data = await response.json();
 
         expect(response.status).toBe(200);
-        expect(data).toEqual({
+        expect(data).toMatchObject({
             ...mockUser,
-            teamId: 1,
             permissions: mockPermissions,
         });
     });

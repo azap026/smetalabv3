@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { permissions, rolePermissions, platformRolePermissions } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getUser } from '@/lib/db/queries';
 
 export async function GET() {
@@ -12,42 +12,38 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
 
-        // Get all permissions
-        const allPermissions = await db.select().from(permissions).orderBy(permissions.scope, permissions.code);
+        const [allPermissions, tenantRolePerms, platformRolePerms] = await Promise.all([
+            db.select().from(permissions).orderBy(permissions.scope, permissions.code),
+            db.select().from(rolePermissions),
+            db.select().from(platformRolePermissions)
+        ]);
 
-        // Get tenant role permissions
-        const tenantRolePerms = await db.select().from(rolePermissions);
-
-        // Get platform role permissions
-        const platformRolePerms = await db.select().from(platformRolePermissions);
-
-        // Group permissions by scope
         const tenantPermissions = allPermissions.filter(p => p.scope === 'tenant');
         const platformPermissions = allPermissions.filter(p => p.scope === 'platform');
 
-        // Build role permission maps
-        const tenantRoleMap: Record<string, number[]> = {
-            admin: [],
-            estimator: [],
-            manager: [],
+        const tenantRoleMap: Record<string, Record<number, string>> = {
+            admin: {},
+            estimator: {},
+            manager: {},
         };
 
-        for (const rp of tenantRolePerms) {
+        const platformRoleMap: Record<string, Record<number, string>> = {
+            superadmin: {},
+            support: {},
+        };
+
+        // Efficiently fill maps
+        tenantRolePerms.forEach(rp => {
             if (tenantRoleMap[rp.role]) {
-                tenantRoleMap[rp.role].push(rp.permissionId);
+                tenantRoleMap[rp.role][rp.permissionId] = rp.accessLevel;
             }
-        }
+        });
 
-        const platformRoleMap: Record<string, number[]> = {
-            superadmin: [],
-            support: [],
-        };
-
-        for (const prp of platformRolePerms) {
+        platformRolePerms.forEach(prp => {
             if (platformRoleMap[prp.platformRole]) {
-                platformRoleMap[prp.platformRole].push(prp.permissionId);
+                platformRoleMap[prp.platformRole][prp.permissionId] = prp.accessLevel;
             }
-        }
+        });
 
         return NextResponse.json({
             tenantPermissions,
@@ -72,43 +68,43 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { type, role, permissionId, enabled } = body;
+        const { type, role, permissionId, level } = body; // level: 'none' | 'read' | 'manage'
 
         if (type === 'tenant') {
-            if (enabled) {
+            if (level === 'none') {
+                await db.delete(rolePermissions).where(
+                    and(
+                        eq(rolePermissions.role, role),
+                        eq(rolePermissions.permissionId, permissionId)
+                    )
+                );
+            } else {
                 await db.insert(rolePermissions).values({
                     role: role,
                     permissionId: permissionId,
-                }).onConflictDoNothing();
-            } else {
-                await db.delete(rolePermissions).where(
-                    eq(rolePermissions.id,
-                        (await db.select({ id: rolePermissions.id }).from(rolePermissions)
-                            .where(eq(rolePermissions.role, role))
-                            .then(rows => rows.find(r => r.id)?.id ?? 0))
-                    )
-                );
-                // More precise delete
-                const existing = await db.select().from(rolePermissions)
-                    .where(eq(rolePermissions.role, role));
-                const toDelete = existing.find(e => e.permissionId === permissionId);
-                if (toDelete) {
-                    await db.delete(rolePermissions).where(eq(rolePermissions.id, toDelete.id));
-                }
+                    accessLevel: level,
+                }).onConflictDoUpdate({
+                    target: [rolePermissions.role, rolePermissions.permissionId],
+                    set: { accessLevel: level }
+                });
             }
         } else if (type === 'platform') {
-            if (enabled) {
+            if (level === 'none') {
+                await db.delete(platformRolePermissions).where(
+                    and(
+                        eq(platformRolePermissions.platformRole, role),
+                        eq(platformRolePermissions.permissionId, permissionId)
+                    )
+                );
+            } else {
                 await db.insert(platformRolePermissions).values({
                     platformRole: role,
                     permissionId: permissionId,
-                }).onConflictDoNothing();
-            } else {
-                const existing = await db.select().from(platformRolePermissions)
-                    .where(eq(platformRolePermissions.platformRole, role));
-                const toDelete = existing.find(e => e.permissionId === permissionId);
-                if (toDelete) {
-                    await db.delete(platformRolePermissions).where(eq(platformRolePermissions.id, toDelete.id));
-                }
+                    accessLevel: level,
+                }).onConflictDoUpdate({
+                    target: [platformRolePermissions.platformRole, platformRolePermissions.permissionId],
+                    set: { accessLevel: level }
+                });
             }
         }
 

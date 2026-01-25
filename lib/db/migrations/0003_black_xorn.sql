@@ -1,0 +1,2 @@
+ALTER TABLE "platform_role_permissions" ADD COLUMN "show_in_ui" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "role_permissions" ADD COLUMN "show_in_ui" boolean DEFAULT true NOT NULL;

@@ -1,7 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "concurrently \"pnpm dev:next\" \"pnpm db:studio\"",
+    "dev:next": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "db:setup": "npx tsx lib/db/setup.ts",
@@ -68,6 +69,7 @@
     "@typescript-eslint/parser": "^8.53.1",
     "@vitejs/plugin-react": "^5.1.2",
     "baseline-browser-mapping": "^2.9.17",
+    "concurrently": "^9.2.1",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.4",
     "globals": "^17.1.0",

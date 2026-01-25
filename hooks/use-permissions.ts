@@ -2,31 +2,32 @@
 
 import { useEffect, useState } from 'react';
 
+interface PermissionEntry {
+    code: string;
+    level: 'read' | 'manage';
+}
+
 interface UsePermissionsOptions {
     tenantId?: number;
 }
 
 interface UsePermissionsResult {
-    permissions: string[];
+    permissions: PermissionEntry[];
     loading: boolean;
-    hasPermission: (code: string) => boolean;
+    hasPermission: (code: string, requiredLevel?: 'read' | 'manage') => boolean;
+    canRead: (code: string) => boolean;
+    canManage: (code: string) => boolean;
     hasAnyPermission: (...codes: string[]) => boolean;
-    hasAllPermissions: (...codes: string[]) => boolean;
 }
 
 export function usePermissions(options: UsePermissionsOptions = {}): UsePermissionsResult {
-    const [permissions, setPermissions] = useState<string[]>([]);
+    const [permissions, setPermissions] = useState<PermissionEntry[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function fetchPermissions() {
             try {
-                const params = new URLSearchParams();
-                if (options.tenantId) {
-                    params.set('tenantId', options.tenantId.toString());
-                }
-
-                const response = await fetch(`/api/user/permissions?${params}`);
+                const response = await fetch('/api/user');
                 if (response.ok) {
                     const data = await response.json();
                     setPermissions(data.permissions || []);
@@ -39,25 +40,32 @@ export function usePermissions(options: UsePermissionsOptions = {}): UsePermissi
         }
 
         fetchPermissions();
-    }, [options.tenantId]);
+    }, []);
 
-    const hasPermission = (code: string): boolean => {
-        return permissions.includes(code);
+    const hasPermission = (code: string, requiredLevel: 'read' | 'manage' = 'read'): boolean => {
+        const perm = permissions.find(p => p.code === code);
+        if (!perm) return false;
+
+        if (requiredLevel === 'manage') {
+            return perm.level === 'manage';
+        }
+
+        return true; // if they have it at all, they can read
     };
+
+    const canRead = (code: string) => hasPermission(code, 'read');
+    const canManage = (code: string) => hasPermission(code, 'manage');
 
     const hasAnyPermission = (...codes: string[]): boolean => {
-        return codes.some(code => permissions.includes(code));
-    };
-
-    const hasAllPermissions = (...codes: string[]): boolean => {
-        return codes.every(code => permissions.includes(code));
+        return codes.some(code => permissions.some(p => p.code === code));
     };
 
     return {
         permissions,
         loading,
         hasPermission,
+        canRead,
+        canManage,
         hasAnyPermission,
-        hasAllPermissions,
     };
 }

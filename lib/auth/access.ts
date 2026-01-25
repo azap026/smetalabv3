@@ -16,7 +16,8 @@ interface CheckAccessResult {
  */
 export async function checkAccess(
     permissionCode: string,
-    tenantId?: number
+    tenantId?: number,
+    requiredLevel: 'read' | 'manage' = 'read'
 ): Promise<CheckAccessResult> {
     const user = await getUser();
 
@@ -44,7 +45,7 @@ export async function checkAccess(
         }
     }
 
-    const authorized = await hasPermission(user.id, resolvedTenantId, permissionCode);
+    const authorized = await hasPermission(user.id, resolvedTenantId, permissionCode, requiredLevel);
 
     return {
         authorized,

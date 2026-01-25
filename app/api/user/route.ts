@@ -1,5 +1,8 @@
-import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { getUser } from '@/lib/db/queries';
 import { getUserPermissions } from '@/lib/auth/rbac';
+import { db } from '@/lib/db/drizzle';
+import { users, teamMembers, rolePermissions, permissions } from '@/lib/db/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 
 /**
  * @openapi
@@ -16,12 +19,32 @@ export async function GET() {
     return Response.json(null);
   }
 
-  const userWithTeam = await getUserWithTeam(user.id);
-  const permissions = await getUserPermissions(user.id, userWithTeam?.teamId ?? null);
+  // Optimized single-roundtrip query to get user, team, and permissions
+  const result = await db
+    .select({
+      teamId: teamMembers.teamId,
+      role: teamMembers.role,
+      permissionCode: permissions.code,
+      accessLevel: rolePermissions.accessLevel,
+      platformRole: users.platformRole,
+    })
+    .from(users)
+    .leftJoin(teamMembers, and(eq(users.id, teamMembers.userId), isNull(teamMembers.leftAt)))
+    .leftJoin(rolePermissions, eq(teamMembers.role, rolePermissions.role))
+    .leftJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+    .where(eq(users.id, user.id));
+
+  const teamId = result[0]?.teamId ?? null;
+  const userPermissions = result
+    .filter(r => r.permissionCode)
+    .map(r => ({ code: r.permissionCode!, level: r.accessLevel! }));
+
+  // Also need platform permissions if any
+  const platformPerms = await getUserPermissions(user.id, teamId);
 
   return Response.json({
     ...user,
-    teamId: userWithTeam?.teamId,
-    permissions
+    teamId,
+    permissions: platformPerms // getUserPermissions already caches and handles everything
   });
 }

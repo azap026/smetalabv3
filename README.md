@@ -220,3 +220,11 @@ While this template is intentionally minimal and to be used as a learning resour
 - https://makerkit.dev
 - https://zerotoshipped.com
 - https://turbostarter.dev
+
+## Google Jules Integration
+
+This project is configured to work with **Google Jules**, an autonomous AI coding agent.
+
+- **Instructions**: See `AGENTS.md` for project rules and context.
+- **Setup**: Jules uses `.jules/setup.sh` to prepare its environment.
+- **Connection**: To connect Jules to this project, visit [jules.google.com](https://jules.google.com) and link your GitHub repository.

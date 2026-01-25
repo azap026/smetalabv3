@@ -22,6 +22,20 @@
       "when": 1769258707710,
       "tag": "0002_flaky_owl",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769336566255,
+      "tag": "0003_black_xorn",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769339293522,
+      "tag": "0004_motionless_darwin",
+      "breakpoints": true
     }
   ]
 }

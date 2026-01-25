@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, X, Shield, Users, Building2 } from 'lucide-react';
+import { Shield, Users, Building2, Settings2, Eye, Edit3, XCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Permission {
     id: number;
@@ -18,8 +19,8 @@ interface Permission {
 interface PermissionsData {
     tenantPermissions: Permission[];
     platformPermissions: Permission[];
-    tenantRoleMap: Record<string, number[]>;
-    platformRoleMap: Record<string, number[]>;
+    tenantRoleMap: Record<string, Record<number, string>>;
+    platformRoleMap: Record<string, Record<number, string>>;
     tenantRoles: string[];
     platformRoles: string[];
 }
@@ -32,12 +33,10 @@ const ROLE_LABELS: Record<string, string> = {
     support: 'Поддержка',
 };
 
-const ROLE_COLORS: Record<string, string> = {
-    admin: 'bg-red-100 text-red-800',
-    estimator: 'bg-blue-100 text-blue-800',
-    manager: 'bg-green-100 text-green-800',
-    superadmin: 'bg-purple-100 text-purple-800',
-    support: 'bg-orange-100 text-orange-800',
+const MODE_COLORS = {
+    none: 'bg-gray-50 text-gray-400 border-transparent',
+    read: 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm',
+    manage: 'bg-orange-50 text-orange-600 border-orange-200 shadow-sm',
 };
 
 export function PermissionsMatrix() {
@@ -63,11 +62,11 @@ export function PermissionsMatrix() {
         }
     }
 
-    async function togglePermission(
+    async function setLevel(
         type: 'tenant' | 'platform',
         role: string,
         permissionId: number,
-        currentlyEnabled: boolean
+        level: 'none' | 'read' | 'manage'
     ) {
         const key = `${type}-${role}-${permissionId}`;
         setUpdating(key);
@@ -76,187 +75,145 @@ export function PermissionsMatrix() {
             const response = await fetch('/api/admin/permissions', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type,
-                    role,
-                    permissionId,
-                    enabled: !currentlyEnabled,
-                }),
+                body: JSON.stringify({ type, role, permissionId, level }),
             });
 
             if (response.ok) {
                 await fetchPermissions();
             }
         } catch (error) {
-            console.error('Failed to update permission:', error);
+            console.error('Failed to update level:', error);
         } finally {
             setUpdating(null);
         }
     }
 
-    if (loading) {
-        return (
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-6 w-48" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-64 w-full" />
-                </CardContent>
-            </Card>
-        );
-    }
+    if (loading) return <Skeleton className="h-[400px] w-full rounded-2xl" />;
+    if (!data) return null;
 
-    if (!data) {
-        return (
-            <Card>
-                <CardContent className="py-8">
-                    <p className="text-center text-gray-500">Не удалось загрузить данные</p>
-                </CardContent>
-            </Card>
-        );
-    }
+    const renderHeader = (roles: string[]) => (
+        <thead className="bg-gray-50/80 backdrop-blur sticky top-0 z-20 border-b">
+            <tr>
+                <th className="text-left py-4 px-6 font-bold text-[10px] uppercase tracking-widest text-muted-foreground w-1/3">Функциональная область</th>
+                {roles.map(role => (
+                    <th key={role} className="text-center py-4 px-2 border-l border-gray-100">
+                        <Badge variant="outline" className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md border-gray-200">
+                            {ROLE_LABELS[role]}
+                        </Badge>
+                    </th>
+                ))}
+            </tr>
+        </thead>
+    );
+
+    const renderRow = (type: 'tenant' | 'platform', perm: Permission, roles: string[], roleMap: Record<string, Record<number, string>>) => (
+        <tr key={perm.id} className="border-b last:border-0 hover:bg-zinc-50/50 transition-colors">
+            <td className="py-4 px-6">
+                <div className="flex flex-col">
+                    <span className="text-sm font-black text-zinc-900 tracking-tight">{perm.name}</span>
+                    <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed max-w-xs">{perm.description}</p>
+                </div>
+            </td>
+            {roles.map(role => {
+                const currentLevel = roleMap[role]?.[perm.id] || 'none';
+                const isUpdating = updating === `${type}-${role}-${perm.id}`;
+
+                return (
+                    <td key={role} className="py-4 px-2 border-l border-gray-50">
+                        <div className="flex items-center justify-center">
+                            <div className="flex p-1 bg-zinc-100 rounded-xl gap-1">
+                                <TooltipProvider delayDuration={200}>
+                                    {/* NONE */}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={() => setLevel(type, role, perm.id, 'none')}
+                                                className={`p-1.5 rounded-lg transition-all ${currentLevel === 'none' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                                disabled={isUpdating}
+                                            >
+                                                <XCircle className="h-4 w-4" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="text-[10px]">Отключить (скрыть)</TooltipContent>
+                                    </Tooltip>
+
+                                    {/* READ */}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={() => setLevel(type, role, perm.id, 'read')}
+                                                className={`p-1.5 rounded-lg transition-all ${currentLevel === 'read' ? 'bg-blue-500 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                                disabled={isUpdating}
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="text-[10px]">Чтение (только просмотр)</TooltipContent>
+                                    </Tooltip>
+
+                                    {/* MANAGE */}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={() => setLevel(type, role, perm.id, 'manage')}
+                                                className={`p-1.5 rounded-lg transition-all ${currentLevel === 'manage' ? 'bg-orange-500 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-600'}`}
+                                                disabled={isUpdating}
+                                            >
+                                                <Edit3 className="h-4 w-4" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="text-[10px]">Полный доступ (ред.)</TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                        </div>
+                    </td>
+                );
+            })}
+        </tr>
+    );
 
     return (
-        <Tabs defaultValue="tenant" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="tenant" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Роли тенанта
-                </TabsTrigger>
-                <TabsTrigger value="platform" className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Роли платформы
-                </TabsTrigger>
-            </TabsList>
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-xl font-black text-zinc-900 tracking-tight uppercase italic flex items-center gap-2">
+                        <Settings2 className="h-5 w-5" /> Контроль доступа
+                    </h2>
+                    <p className="text-xs text-zinc-500 font-medium">Модель прав 3-го уровня: <span className="text-zinc-400 font-bold">Выкл</span> / <span className="text-blue-500 font-bold">Чтение</span> / <span className="text-orange-500 font-bold">Полный</span></p>
+                </div>
+            </div>
 
-            <TabsContent value="tenant">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-orange-500" />
-                            Матрица прав для ролей тенанта
-                        </CardTitle>
-                        <CardDescription>
-                            Определяет, какие действия доступны пользователям в рамках их команды
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left py-3 px-4 font-medium text-gray-500">Разрешение</th>
-                                        {data.tenantRoles.map(role => (
-                                            <th key={role} className="text-center py-3 px-4 min-w-[100px]">
-                                                <Badge variant="outline" className={ROLE_COLORS[role]}>
-                                                    {ROLE_LABELS[role]}
-                                                </Badge>
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.tenantPermissions.map((perm, idx) => (
-                                        <tr key={perm.id} className={idx % 2 === 0 ? 'bg-gray-50' : ''}>
-                                            <td className="py-3 px-4">
-                                                <div className="font-medium text-gray-900">{perm.name}</div>
-                                                <div className="text-xs text-gray-500">{perm.code}</div>
-                                            </td>
-                                            {data.tenantRoles.map(role => {
-                                                const hasPermission = data.tenantRoleMap[role]?.includes(perm.id);
-                                                const isUpdating = updating === `tenant-${role}-${perm.id}`;
+            <Tabs defaultValue="tenant" className="w-full">
+                <TabsList className="bg-zinc-100 p-1 mb-6 h-12 rounded-2xl w-full sm:w-auto">
+                    <TabsTrigger value="tenant" className="rounded-xl px-8 font-black text-xs uppercase data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
+                        <Users className="h-4 w-4 mr-2" /> Роли команды
+                    </TabsTrigger>
+                    <TabsTrigger value="platform" className="rounded-xl px-8 font-black text-xs uppercase data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
+                        <Building2 className="h-4 w-4 mr-2" /> Платформа
+                    </TabsTrigger>
+                </TabsList>
 
-                                                return (
-                                                    <td key={role} className="text-center py-3 px-4">
-                                                        <button
-                                                            onClick={() => togglePermission('tenant', role, perm.id, hasPermission)}
-                                                            disabled={isUpdating}
-                                                            className={`
-                                p-2 rounded-full transition-all
-                                ${hasPermission
-                                                                    ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}
-                                ${isUpdating ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
-                              `}
-                                                        >
-                                                            {hasPermission ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                                        </button>
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
+                <div className="bg-white border-2 border-zinc-100 rounded-[2rem] overflow-hidden shadow-2xl shadow-zinc-200/50">
+                    <TabsContent value="tenant" className="m-0 overflow-x-auto">
+                        <table className="w-full border-collapse">
+                            {renderHeader(data.tenantRoles)}
+                            <tbody>
+                                {data.tenantPermissions.map((perm) => renderRow('tenant', perm, data.tenantRoles, data.tenantRoleMap))}
+                            </tbody>
+                        </table>
+                    </TabsContent>
 
-            <TabsContent value="platform">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Building2 className="h-5 w-5 text-purple-500" />
-                            Матрица прав для ролей платформы
-                        </CardTitle>
-                        <CardDescription>
-                            Определяет доступ к административным функциям платформы
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left py-3 px-4 font-medium text-gray-500">Разрешение</th>
-                                        {data.platformRoles.map(role => (
-                                            <th key={role} className="text-center py-3 px-4 min-w-[100px]">
-                                                <Badge variant="outline" className={ROLE_COLORS[role]}>
-                                                    {ROLE_LABELS[role]}
-                                                </Badge>
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.platformPermissions.map((perm, idx) => (
-                                        <tr key={perm.id} className={idx % 2 === 0 ? 'bg-gray-50' : ''}>
-                                            <td className="py-3 px-4">
-                                                <div className="font-medium text-gray-900">{perm.name}</div>
-                                                <div className="text-xs text-gray-500">{perm.code}</div>
-                                            </td>
-                                            {data.platformRoles.map(role => {
-                                                const hasPermission = data.platformRoleMap[role]?.includes(perm.id);
-                                                const isUpdating = updating === `platform-${role}-${perm.id}`;
-
-                                                return (
-                                                    <td key={role} className="text-center py-3 px-4">
-                                                        <button
-                                                            onClick={() => togglePermission('platform', role, perm.id, hasPermission)}
-                                                            disabled={isUpdating}
-                                                            className={`
-                                p-2 rounded-full transition-all
-                                ${hasPermission
-                                                                    ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}
-                                ${isUpdating ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
-                              `}
-                                                        >
-                                                            {hasPermission ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
-                                                        </button>
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-        </Tabs>
+                    <TabsContent value="platform" className="m-0 overflow-x-auto">
+                        <table className="w-full border-collapse">
+                            {renderHeader(data.platformRoles)}
+                            <tbody>
+                                {data.platformPermissions.map((perm) => renderRow('platform', perm, data.platformRoles, data.platformRoleMap))}
+                            </tbody>
+                        </table>
+                    </TabsContent>
+                </div>
+            </Tabs>
+        </div>
     );
 }

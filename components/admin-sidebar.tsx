@@ -18,6 +18,7 @@ import {
     Settings,
     Activity,
     Shield,
+    Key,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -32,6 +33,11 @@ const adminNavItems = [
         title: 'Тенанты',
         url: '/dashboard/tenants',
         icon: Users,
+    },
+    {
+        title: 'Разрешения',
+        url: '/dashboard/permissions',
+        icon: Key,
     },
     {
         title: 'Общие',

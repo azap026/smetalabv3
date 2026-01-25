@@ -47,19 +47,11 @@ jobs:
       - name: Build check
         run: pnpm build
 
+  # 🚀 DEPLOYMENT: Only runs on main branch after CI passes
   deploy:
     needs: ci
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    env:
-      POSTGRES_URL: "${{ secrets.POSTGRES_URL }}"
-      AUTH_SECRET: "${{ secrets.AUTH_SECRET }}"
-      STRIPE_SECRET_KEY: "${{ secrets.STRIPE_SECRET_KEY }}"
-      STRIPE_WEBHOOK_SECRET: "${{ secrets.STRIPE_WEBHOOK_SECRET }}"
-      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}"
-      RESEND_API_KEY: "${{ secrets.RESEND_API_KEY }}"
-      BASE_URL: "${{ secrets.BASE_URL }}"
-
     steps:
       - uses: actions/checkout@v4
 
@@ -78,10 +70,17 @@ jobs:
         run: pnpm install
 
       - name: Run Database Migrations
+        env:
+          POSTGRES_URL: "${{ secrets.POSTGRES_URL }}"
         run: pnpm db:migrate
 
       - name: Trigger Render Deployment
+        # NOTE: You MUST disable 'Auto Deploy' in Render Dashboard for this to work as expected.
+        # This ensuring deployment happens ONLY after CI/CD tests pass here.
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         if: success() && env.RENDER_DEPLOY_HOOK != ''
-        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Triggering Render deployment..."
+          curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          echo "Deployment request sent to Render."

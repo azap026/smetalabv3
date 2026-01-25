@@ -165,51 +165,26 @@ To test Stripe payments, use the following test card details:
 
 ## CI/CD with GitHub Actions
 
-This project includes automated CI/CD pipeline that runs on every push and pull request to `main`:
+This project uses a strict CI/CD pipeline via GitHub Actions to ensure only tested code reaches production:
 
-- **Linting**: Checks code style with ESLint
-- **Type checking**: Validates TypeScript types
-- **Build**: Ensures the project builds successfully
+1. **CI Phase**: Runs on every Push/PR. Executes Linting, Type checking, Vitest tests, and a Build check.
+2. **CD Phase**: Runs ONLY on the `main` branch AFTER the CI phase succeeds. It performs database migrations and then triggers Render via a Deploy Hook.
 
-### Setting up GitHub Secrets
+### Setting up Deployment to Render (Frankfurt Region)
 
-For CI to work, add these secrets in your GitHub repository settings (`Settings > Secrets and variables > Actions`):
+1. **Disable Auto Deploy on Render**: In your Render Web Service settings, set **Auto Deploy** to **No**. This prevents Render from deploying untested code as soon as you push.
+2. **GitHub Secrets**: Add the following secrets to your GitHub repository (`Settings > Secrets and variables > Actions`):
+   - `RENDER_DEPLOY_HOOK_URL`: The "Deploy Hook" URL from your Render service dashboard.
+   - `POSTGRES_URL`: Production DB connection string (used for migrations during deploy).
+   - `STRIPE_SECRET_KEY`, `AUTH_SECRET`, etc.
 
-1. `POSTGRES_URL` - Your production/staging database URL
-2. `STRIPE_SECRET_KEY` - Stripe secret key
-3. `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
-4. `AUTH_SECRET` - Authentication secret
-5. `BASE_URL` - Your deployment URL
-
-## Going to Production
-
-When you're ready to deploy your SaaS application to production, follow these steps:
-
-### Set up a production Stripe webhook
-
-1. Go to the Stripe Dashboard and create a new webhook for your production environment.
-2. Set the endpoint URL to your production API route (e.g., `https://your-app.onrender.com/api/stripe/webhook`).
-3. Select the events you want to listen for (e.g., `checkout.session.completed`, `customer.subscription.updated`).
-
-### Deploy to Render
-
-1. Create a new **Web Service** on [Render](https://render.com/).
-2. Connect your GitHub repository.
-3. Select **Node** as the environment.
-4. Set the **Build Command**: `pnpm install && pnpm build`
-5. Set the **Start Command**: `pnpm start`
-6. Add the following environment variables:
-   - `BASE_URL`: Your Render production URL (e.g., `https://smetalab-v2.onrender.com`).
-   - `POSTGRES_URL`: Your production database connection string.
-   - `AUTH_SECRET`: A random 32-character string.
-   - `STRIPE_SECRET_KEY`: Your production Stripe secret key.
-   - `STRIPE_WEBHOOK_SECRET`: The signing secret from your production webhook.
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Your production Stripe publishable key.
-   - `RESEND_API_KEY`: Your Resend API key.
-
-### Automated Deploys
-
-To enable automated deployments after CI passes, add your **Deploy Hook** from Render to your GitHub Repository Secrets as `RENDER_DEPLOY_HOOK_URL`.
+### Production Environment Variables on Render
+Configure these in the Render Dashboard:
+- `BASE_URL`: `https://smeta-lab.ru`
+- `NODE_VERSION`: `20`
+- `PNPM_VERSION`: `latest` (or specific version)
+- `POSTGRES_URL`: Your Frankfurt-based Postgres DB.
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `AUTH_SECRET`, `RESEND_API_KEY`.
 
 ## Other Templates
 

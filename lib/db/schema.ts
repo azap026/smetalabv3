@@ -193,6 +193,23 @@ export const invitations = pgTable('invitations', {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════
+
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  teamId: integer('team_id')
+    .references(() => teams.id),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  read: boolean('read').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ═══════════════════════════════════════════════════════════════
 // RELATIONS
 // ═══════════════════════════════════════════════════════════════
 
@@ -209,6 +226,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   invitationsSent: many(invitations),
   estimateSharesCreated: many(estimateShares),
   impersonationSessions: many(impersonationSessions),
+  notifications: many(notifications),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -285,6 +303,17 @@ export const impersonationSessionsRelations = relations(impersonationSessions, (
   }),
 }));
 
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  team: one(teams, {
+    fields: [notifications.teamId],
+    references: [teams.id],
+  }),
+}));
+
 // ═══════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════
@@ -305,6 +334,8 @@ export type RolePermission = typeof rolePermissions.$inferSelect;
 export type PlatformRolePermission = typeof platformRolePermissions.$inferSelect;
 export type EstimateShare = typeof estimateShares.$inferSelect;
 export type ImpersonationSession = typeof impersonationSessions.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {

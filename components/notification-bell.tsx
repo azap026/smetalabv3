@@ -8,45 +8,61 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import useSWR, { mutate } from 'swr';
+import { useState } from 'react';
 
 interface Notification {
-    id: string;
+    id: number;
     title: string;
     description: string;
-    time: string;
+    createdAt: string;
     read: boolean;
 }
 
-// TODO: Replace with real notifications from API
-const mockNotifications: Notification[] = [
-    {
-        id: '1',
-        title: 'Новый проект создан',
-        description: 'Проект "Ремонт офиса" успешно создан',
-        time: '5 мин назад',
-        read: false,
-    },
-    {
-        id: '2',
-        title: 'Смета обновлена',
-        description: 'Смета по проекту была изменена',
-        time: '1 час назад',
-        read: false,
-    },
-    {
-        id: '3',
-        title: 'Закупка завершена',
-        description: 'Материалы доставлены на объект',
-        time: '2 часа назад',
-        read: true,
-    },
-];
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+function timeAgo(dateString: string) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " г. назад";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " мес. назад";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " дн. назад";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " ч. назад";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " мин. назад";
+    return "менее минуты назад";
+}
 
 export function NotificationBell() {
-    const unreadCount = mockNotifications.filter((n) => !n.read).length;
+    const { data: notifications, isLoading } = useSWR<Notification[]>('/api/notifications', fetcher);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const unreadCount = notifications?.filter((n) => !n.read).length || 0;
+
+    const handleMarkAsRead = async (id: number) => {
+        // Optimistic update
+        mutate('/api/notifications', (currentNotifications: Notification[] | undefined) => {
+            if (!currentNotifications) return [];
+            return currentNotifications.map(n => n.id === id ? { ...n, read: true } : n);
+        }, false);
+
+        try {
+            await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+            mutate('/api/notifications'); // Revalidate to ensure data consistency
+        } catch (error) {
+            console.error('Failed to mark as read', error);
+            mutate('/api/notifications'); // Revert on error
+        }
+    };
 
     return (
-        <Popover>
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
@@ -71,14 +87,19 @@ export function NotificationBell() {
                     )}
                 </div>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {mockNotifications.length === 0 ? (
+                    {isLoading ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                            Загрузка...
+                        </p>
+                    ) : !notifications || notifications.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">
                             Нет уведомлений
                         </p>
                     ) : (
-                        mockNotifications.map((notification) => (
+                        notifications.map((notification) => (
                             <div
                                 key={notification.id}
+                                onClick={() => !notification.read && handleMarkAsRead(notification.id)}
                                 className={`p-2 rounded-lg cursor-pointer hover:bg-muted transition-colors ${!notification.read ? 'bg-muted/50' : ''
                                     }`}
                             >
@@ -92,7 +113,7 @@ export function NotificationBell() {
                                             {notification.description}
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            {notification.time}
+                                            {timeAgo(notification.createdAt)}
                                         </p>
                                     </div>
                                 </div>

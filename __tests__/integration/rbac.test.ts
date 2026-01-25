@@ -15,7 +15,7 @@ describe('RBAC Integration Tests', () => {
 
     beforeEach(async () => {
         // 1. Surgical Cleanup
-        await db.execute(sql`DELETE FROM team_members WHERE user_id IN (9999, 9998)`);
+        await db.execute(sql`DELETE FROM team_members WHERE team_id = 9999 OR user_id IN (9999, 9998)`);
         await db.execute(sql`DELETE FROM users WHERE id IN (9999, 9998)`);
         await db.execute(sql`DELETE FROM role_permissions WHERE permission_id IN (SELECT id FROM permissions WHERE code = ${testPermissionCode})`);
         await db.execute(sql`DELETE FROM permissions WHERE code = ${testPermissionCode}`);

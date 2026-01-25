@@ -20,10 +20,8 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const userPromise = getUser();
-  const teamPromise = getTeamForUser();
-
-  const [user, team] = await Promise.all([userPromise, teamPromise]);
+  const user = await getUser();
+  const team = user ? await getTeamForUser(user.id) : null;
 
   return (
     <html

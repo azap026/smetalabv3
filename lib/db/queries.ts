@@ -101,14 +101,19 @@ export async function getActivityLogs() {
     .limit(10);
 }
 
-export async function getTeamForUser() {
-  const user = await getUser();
-  if (!user) {
+export async function getTeamForUser(userId?: number) {
+  let idToCheck = userId;
+  if (!idToCheck) {
+    const user = await getUser();
+    idToCheck = user?.id;
+  }
+
+  if (!idToCheck) {
     return null;
   }
 
   const result = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
+    where: eq(teamMembers.userId, idToCheck),
     with: {
       team: {
         with: {

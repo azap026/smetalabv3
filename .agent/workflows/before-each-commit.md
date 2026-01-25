@@ -20,7 +20,7 @@ description: Before each commit, run through the following checklist to maintain
    - Run `pnpm test:e2e` — Verify all user flows (auth, navigation, RBAC) pass in a real browser.
 
 6. **ACTUALIZE & DOCUMENT**: 
-   - **Coverage**: If you added a new page, component, or endpoint, you MUST add or update tests in `__tests__/`.
+   - **Coverage**: If you added a new page, component, or endpoint, you MUST add or update tests in `__tests__/`. **No new feature is complete without test coverage.**
    - **Docs**: Update `README.md` and `AGENTS.md` if any architecture, feature, or logic changed.
 
 7. **Project File Inventory (Cleanup)**: 

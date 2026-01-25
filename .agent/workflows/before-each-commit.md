@@ -2,16 +2,31 @@
 description: Before each commit, run through the following checklist to maintain code quality and consistency:
 ---
 
-1. **Database Migrations in Sync**: Run the Drizzle ORM migration generation and apply it. Use `pnpm db:generate` to create any new migration files for schema changes, and then run `pnpm db:migrate` to apply them.
+1. **Database Migrations/Sync**: 
+   - Run `pnpm db:generate` if the schema changed.
+   - Run `pnpm db:migrate` to ensure your local DB is up to date.
 
-2. **Lint and Type-Check**: Before every commit, you MUST execute the linters and TypeScript checker. Run `pnpm lint` and `pnpm type-check`. All errors must be resolved.
+2. **Lint and Type-Check**: 
+   - Run `pnpm lint` — ALL errors must be fixed.
+   - Run `pnpm type-check` — ALL TypeScript errors must be fixed.
 
-3. **Run Unit & Integration Tests**: Ensure all tests pass by running `pnpm test`. 
+3. **Run Unit & Integration Tests**: 
+   - Run `pnpm test` — Ensure core logic is not broken.
 
-4. **Run E2E Tests**: Ensure all browser scenarios pass by running `pnpm test:e2e`. 
+4. **Prepare for E2E Tests**:
+   - Run `pnpm db:seed` — **MANDATORY** to ensure the database has the expected users/data for Playwright login scenarios.
 
-5. **ACTUALIZE TESTS**: If you added a new page, API endpoint, or logic, you MUST update or create corresponding tests in the `__tests__/` directory. **No new feature is complete without test coverage.**
+5. **Run E2E Tests**: 
+   - Run `pnpm test:e2e` — Verify all user flows (auth, navigation, RBAC) pass in a real browser.
 
-6. **Update Documentation**: If your changes modify any features, API, or project structure, update `README.md` and `AGENTS.md`.
+6. **ACTUALIZE & DOCUMENT**: 
+   - **Coverage**: If you added a new page, component, or endpoint, you MUST add or update tests in `__tests__/`.
+   - **Docs**: Update `README.md` and `AGENTS.md` if any architecture, feature, or logic changed.
 
-7. **Final Cleanup**: Remove `test_output.txt`, `.log`, `.tmp`, and any other temporary artifacts created during development.
+7. **Project File Inventory (Cleanup)**: 
+   - Remove `test_output.txt`, `*.log`, `*.tmp`.
+   - Delete unused assets (e.g., unused `svg`, `debug.ts`, temporary images).
+   - Ensure NO `console.log` or `debugger` statements are left in the code.
+
+8. **Commit Message**:
+   - Ensure your commit message follows the **Conventional Commits** format (e.g., `feat: ...`, `fix: ...`, `chore: ...`).

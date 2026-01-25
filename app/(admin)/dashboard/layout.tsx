@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin-sidebar';
+import { UserMenu } from '@/components/user-menu';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-semibold text-lg">Admin Dashboard</span>
           </div>
           <div>
-            {/* TODO: Admin user menu */}
+            <UserMenu />
           </div>
         </header>
         <main className="flex-1 p-6">

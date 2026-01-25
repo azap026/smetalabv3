@@ -53,11 +53,11 @@ async function seed() {
     .values({
       email: email,
       passwordHash: passwordHash,
-      role: 'member',
+      role: 'owner',
     })
     .onConflictDoUpdate({
       target: users.email,
-      set: { passwordHash: passwordHash },
+      set: { passwordHash: passwordHash, role: 'owner' },
     });
 
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);

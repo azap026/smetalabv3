@@ -140,33 +140,67 @@ export const getUserPermissions = cache(async function (
     tenantId: number | null,
     ctx?: { impersonationSessionId?: string }
 ): Promise<Array<{ code: string; level: 'read' | 'manage' }>> {
-    const [user] = await db
-        .select()
+    // Parallelize User+PlatformPerms and Member+TenantPerms
+    const userPromise = db
+        .select({
+            user: users,
+            permCode: permissions.code,
+            accessLevel: platformRolePermissions.accessLevel,
+        })
         .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
+        .leftJoin(
+            platformRolePermissions,
+            eq(users.platformRole, platformRolePermissions.platformRole)
+        )
+        .leftJoin(
+            permissions,
+            eq(platformRolePermissions.permissionId, permissions.id)
+        )
+        .where(eq(users.id, userId));
 
-    if (!user) return [];
+    const memberPromise = tenantId
+        ? db
+              .select({
+                  member: teamMembers,
+                  permCode: permissions.code,
+                  accessLevel: rolePermissions.accessLevel,
+              })
+              .from(teamMembers)
+              .leftJoin(
+                  rolePermissions,
+                  eq(teamMembers.role, rolePermissions.role)
+              )
+              .leftJoin(
+                  permissions,
+                  eq(rolePermissions.permissionId, permissions.id)
+              )
+              .where(
+                  and(
+                      eq(teamMembers.userId, userId),
+                      eq(teamMembers.teamId, tenantId),
+                      isNull(teamMembers.leftAt)
+                  )
+              )
+        : Promise.resolve([]);
+
+    const [userRows, memberRows] = await Promise.all([
+        userPromise,
+        memberPromise,
+    ]);
+
+    if (userRows.length === 0) return [];
+    const user = userRows[0].user; // All rows have same user info
 
     const permsMap = new Map<string, 'read' | 'manage'>();
 
-    // 1. Get Platform Permissions
-    if (user.platformRole) {
-        const platformPerms = await db
-            .select({
-                code: permissions.code,
-                level: platformRolePermissions.accessLevel
-            })
-            .from(platformRolePermissions)
-            .innerJoin(permissions, eq(platformRolePermissions.permissionId, permissions.id))
-            .where(eq(platformRolePermissions.platformRole, user.platformRole));
-
-        for (const p of platformPerms) {
-            permsMap.set(p.code, p.level as 'read' | 'manage');
+    // 1. Process Platform Permissions
+    for (const row of userRows) {
+        if (row.permCode && row.accessLevel) {
+            permsMap.set(row.permCode, row.accessLevel as 'read' | 'manage');
         }
     }
 
-    // 2. Get Tenant Permissions
+    // 2. Process Tenant Permissions
     if (user.platformRole === 'superadmin' && ctx?.impersonationSessionId) {
         // Superadmin in impersonation sees all tenant permissions with 'manage' level
         const tenantPerms = await db
@@ -177,32 +211,21 @@ export const getUserPermissions = cache(async function (
         for (const p of tenantPerms) {
             permsMap.set(p.code, 'manage');
         }
-    } else if (tenantId) {
-        const [member] = await db
-            .select()
-            .from(teamMembers)
-            .where(and(eq(teamMembers.userId, userId), eq(teamMembers.teamId, tenantId), isNull(teamMembers.leftAt)))
-            .limit(1);
-
-        if (member) {
-            const tenantPerms = await db
-                .select({
-                    code: permissions.code,
-                    level: rolePermissions.accessLevel
-                })
-                .from(rolePermissions)
-                .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-                .where(eq(rolePermissions.role, member.role));
-
-            for (const p of tenantPerms) {
+    } else if (tenantId && memberRows.length > 0) {
+        for (const row of memberRows) {
+            if (row.permCode && row.accessLevel) {
                 // If a permission exists from multiple sources, choose highest level
-                const existing = permsMap.get(p.code);
-                if (!existing || p.level === 'manage') {
-                    permsMap.set(p.code, p.level as 'read' | 'manage');
+                const existing = permsMap.get(row.permCode);
+                const level = row.accessLevel as 'read' | 'manage';
+                if (!existing || level === 'manage') {
+                    permsMap.set(row.permCode, level);
                 }
             }
         }
     }
 
-    return Array.from(permsMap.entries()).map(([code, level]) => ({ code, level }));
+    return Array.from(permsMap.entries()).map(([code, level]) => ({
+        code,
+        level,
+    }));
 });

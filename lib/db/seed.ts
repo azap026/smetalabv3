@@ -70,7 +70,11 @@ async function seed() {
     role: 'admin',
   });
 
-  await createStripeProducts();
+  if (!process.env.CI) {
+    await createStripeProducts();
+  } else {
+    console.log('Skipping Stripe product creation in CI environment.');
+  }
 }
 
 seed()

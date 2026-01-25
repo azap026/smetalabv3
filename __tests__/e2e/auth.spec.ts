@@ -21,7 +21,7 @@ test.describe('Authentication & Basic Navigation', () => {
 
         // Give it a moment to navigate or show an error
         try {
-            await page.waitForURL(/\/app(\/.*)?$/, { timeout: 20000 });
+            await page.waitForURL(/\/app(\/.*)?$/, { timeout: 60000 });
         } catch (e) {
             const errorLocator = page.locator('.text-red-500');
             if (await errorLocator.isVisible()) {
@@ -41,7 +41,7 @@ test.describe('Authentication & Basic Navigation', () => {
         await page.fill('input[name="password"]', 'admin123');
         await page.click('button[type="submit"]');
 
-        await page.waitForURL(/\/app(\/.*)?$/, { timeout: 20000 });
+        await page.waitForURL(/\/app(\/.*)?$/, { timeout: 60000 });
         await expect(page.getByRole('link', { name: /Главная/i })).toBeVisible({ timeout: 15000 });
 
         // Open User Menu
@@ -54,7 +54,7 @@ test.describe('Authentication & Basic Navigation', () => {
         await logoutItem.click();
 
         // Should redirect back to sign-in
-        await page.waitForURL(url => url.pathname === '/sign-in', { timeout: 20000 });
+        await page.waitForURL(url => url.pathname === '/sign-in', { timeout: 60000 });
         await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
     });
 });

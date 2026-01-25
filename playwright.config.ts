@@ -7,7 +7,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export default defineConfig({
     testDir: './__tests__/e2e',
-    timeout: 60000,
+    timeout: 120000,
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,

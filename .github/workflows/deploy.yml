@@ -32,6 +32,7 @@ jobs:
       STRIPE_WEBHOOK_SECRET: whsec_placeholder
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
       RESEND_API_KEY: re_placeholder
+      AUTH_TRUST_HOST: true
 
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +56,9 @@ jobs:
           pnpm db:migrate
           pnpm db:seed
 
+      - name: Build
+        run: pnpm build
+
       - name: Lint
         run: pnpm lint
 
@@ -70,8 +74,7 @@ jobs:
       - name: Run E2E tests
         run: pnpm test:e2e
 
-      - name: Build check
-        run: pnpm build
+
 
       - name: Upload E2E Reports
         uses: actions/upload-artifact@v4

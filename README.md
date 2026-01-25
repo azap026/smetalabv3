@@ -155,6 +155,31 @@ Copy the webhook signing secret (`whsec_...`) and add it to your `.env` as `STRI
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
 
+## Testing
+
+The project has a comprehensive testing suite:
+
+### 1. Unit & Integration Tests (Vitest)
+```bash
+pnpm test
+```
+Located in `__tests__/unit` and `__tests__/integration`.
+
+### 2. End-to-End Tests (Playwright)
+```bash
+# Setup browsers (first time)
+npx playwright install --with-deps chromium
+
+# Run tests
+pnpm test:e2e
+```
+Located in `__tests__/e2e`. These tests run against a production build in CI.
+
+### 3. Type Checking
+```bash
+pnpm type-check
+```
+
 ## Testing Payments
 
 To test Stripe payments, use the following test card details:
@@ -163,12 +188,17 @@ To test Stripe payments, use the following test card details:
 - Expiration: Any future date
 - CVC: Any 3-digit number
 
-## CI/CD with GitHub Actions
+### CI/CD with GitHub Actions
 
 This project uses a strict CI/CD pipeline via GitHub Actions to ensure only tested code reaches production:
 
-1. **CI Phase**: Runs on every Push/PR. Executes Linting, Type checking, Vitest tests, and a Build check.
-2. **CD Phase**: Runs ONLY on the `main` branch AFTER the CI phase succeeds. It performs database migrations and then triggers Render via a Deploy Hook.
+1. **CI Phase**: Runs on every Push/PR.
+   - **Lint & Type Check**: `pnpm lint` and `pnpm type-check`.
+   - **Database Setup**: Migrations and Seeding.
+   - **Vitest**: Unit and Integration tests.
+   - **Playwright**: E2E tests against a production build.
+   - **Build**: Verifies that the app builds correctly.
+2. **CD Phase**: Runs ONLY on the `main` branch AFTER the CI phase succeeds. It performs production database migrations and triggers Render deployment.
 
 ### Setting up Deployment to Render (Frankfurt Region)
 

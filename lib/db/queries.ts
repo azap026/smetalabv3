@@ -3,8 +3,9 @@ import { db } from './drizzle';
 import { activityLogs, teamMembers, teams, users } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
+import { cache } from 'react';
 
-export async function getUser() {
+export const getUser = cache(async () => {
   const sessionCookie = (await cookies()).get('session');
   if (!sessionCookie || !sessionCookie.value) {
     return null;
@@ -34,7 +35,7 @@ export async function getUser() {
   }
 
   return user[0];
-}
+});
 
 export async function getTeamByStripeCustomerId(customerId: string) {
   const result = await db

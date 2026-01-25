@@ -80,10 +80,15 @@ export async function getUserWithTeam(userId: number) {
 
 
 
-export async function getActivityLogs() {
-  const user = await getUser();
-  if (!user) {
-    throw new Error('User not authenticated');
+export async function getActivityLogs(userId?: number) {
+  let targetUserId = userId;
+
+  if (!targetUserId) {
+    const user = await getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    targetUserId = user.id;
   }
 
   return await db
@@ -96,7 +101,7 @@ export async function getActivityLogs() {
     })
     .from(activityLogs)
     .leftJoin(users, eq(activityLogs.userId, users.id))
-    .where(eq(activityLogs.userId, user.id))
+    .where(eq(activityLogs.userId, targetUserId))
     .orderBy(desc(activityLogs.timestamp))
     .limit(10);
 }

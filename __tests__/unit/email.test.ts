@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type Mock } from 'vitest';
 import { sendInvitationEmail } from '@/lib/email/email';
 import { Resend } from 'resend';
 
@@ -24,12 +24,12 @@ describe('Email Sending Logic', () => {
             inviterEmail: 'inviter@example.com',
         };
 
-        (resendInstance.emails.send as vi.Mock).mockResolvedValue({ error: null });
+        (resendInstance.emails.send as Mock).mockResolvedValue({ error: null });
 
         await sendInvitationEmail(params);
 
         expect(resendInstance.emails.send).toHaveBeenCalledOnce();
-        const callArgs = (resendInstance.emails.send as vi.Mock).mock.calls[0][0];
+        const callArgs = (resendInstance.emails.send as Mock).mock.calls[0][0];
 
         expect(callArgs.to).toEqual([params.to]);
         expect(callArgs.subject).toContain(params.teamName);
@@ -43,10 +43,10 @@ describe('Email Sending Logic', () => {
         const params = { to: 'test@example.com', teamName: 'Test Team', role: 'admin', inviteId: 123 };
         const errorMessage = 'API Error';
 
-        (resendInstance.emails.send as vi.Mock).mockResolvedValue({ error: { message: errorMessage } });
+        (resendInstance.emails.send as Mock).mockResolvedValue({ error: { message: errorMessage } });
 
         // Suppress console.error for this test
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
 
         const result = await sendInvitationEmail(params);
 

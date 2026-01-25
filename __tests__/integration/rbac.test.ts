@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers, permissions, rolePermissions, platformRolePermissions, activityLogs, invitations, estimateShares, impersonationSessions } from '@/lib/db/schema';

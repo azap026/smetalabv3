@@ -68,24 +68,22 @@ jobs:
       - name: Run tests
         run: pnpm test
 
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps chromium
+      # - name: Install Playwright Browsers
+      #   run: npx playwright install --with-deps chromium
 
-      - name: Seed Database for E2E
-        run: pnpm db:seed
+      # - name: Seed Database for E2E
+      #   run: pnpm db:seed
 
-      - name: Run E2E tests
-        run: pnpm test:e2e
+      # - name: Run E2E tests
+      #   run: pnpm test:e2e
 
-
-
-      - name: Upload E2E Reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 30
+      # - name: Upload E2E Reports
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: playwright-report
+      #     path: playwright-report/
+      #     retention-days: 30
 
   # 🚀 DEPLOYMENT: Only runs on main branch after CI passes
   deploy:

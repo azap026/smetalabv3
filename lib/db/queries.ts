@@ -1,6 +1,6 @@
-import { desc, and, eq, isNull } from 'drizzle-orm';
+import { desc, and, eq, isNull, or } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import { activityLogs, teamMembers, teams, users, works } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 import { cache } from 'react';
@@ -135,4 +135,22 @@ export async function getTeamForUser() {
   });
 
   return result?.team || null;
+}
+
+export async function getWorks() {
+  const team = await getTeamForUser();
+  const teamId = team?.id;
+
+  return await db
+    .select()
+    .from(works)
+    .where(
+      and(
+        isNull(works.deletedAt),
+        teamId
+          ? or(isNull(works.tenantId), eq(works.tenantId, teamId))
+          : isNull(works.tenantId)
+      )
+    )
+    .orderBy(works.code);
 }

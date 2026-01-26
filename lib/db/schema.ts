@@ -9,8 +9,10 @@ import {
   boolean,
   uniqueIndex,
   index,
+  customType,
+  jsonb,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // ═══════════════════════════════════════════════════════════════
 // ENUMS
@@ -21,6 +23,7 @@ export const tenantRoleEnum = pgEnum('tenant_role', ['admin', 'estimator', 'mana
 export const permissionScopeEnum = pgEnum('permission_scope', ['platform', 'tenant']);
 export const accessLevelEnum = pgEnum('access_level', ['view', 'comment', 'download']);
 export const rbacLevelEnum = pgEnum('rbac_level', ['none', 'read', 'manage']);
+export const workStatusEnum = pgEnum('work_status', ['active', 'draft', 'archived', 'deleted']);
 
 // ═══════════════════════════════════════════════════════════════
 // USERS
@@ -210,6 +213,52 @@ export const notifications = pgTable('notifications', {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// CUSTOM TYPES
+// ═══════════════════════════════════════════════════════════════
+
+export const vector = customType<{
+  data: number[];
+  config: { dimensions: number };
+}>({
+  dataType(config) {
+    return `vector(${config?.dimensions})`;
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// WORKS (Guide)
+// ═══════════════════════════════════════════════════════════════
+
+export const works = pgTable('works', {
+  id: text('id').default(sql`gen_random_uuid()`).primaryKey(),
+  tenantId: integer('tenant_id').references(() => teams.id),
+
+  code: varchar('code', { length: 64 }).notNull(),
+  name: text('name').notNull(),
+  unit: varchar('unit', { length: 20 }),
+  price: integer('price'),
+  shortDescription: text('short_description'),
+  description: text('description'),
+
+  category: text('category'),
+  subcategory: text('subcategory'),
+  tags: text('tags').array(), // pgCore text array
+
+  status: workStatusEnum('status').notNull().default('draft'),
+  metadata: jsonb('metadata').default({}),
+
+  // embedding: vector('embedding', { dimensions: 1024 }),
+  // search_vector: customType<{ data: string }>({ dataType() { return 'tsvector'; } })('search_vector'),
+
+  deletedAt: timestamp('deleted_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => [
+  index('works_tenant_status_idx').on(table.tenantId).where(sql`deleted_at IS NULL AND status = 'active'`),
+  index('works_code_tenant_idx').on(table.tenantId, table.code).where(sql`deleted_at IS NULL`),
+]);
+
+// ═══════════════════════════════════════════════════════════════
 // RELATIONS
 // ═══════════════════════════════════════════════════════════════
 
@@ -314,6 +363,13 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
+export const worksRelations = relations(works, ({ one }) => ({
+  tenant: one(teams, {
+    fields: [works.tenantId],
+    references: [teams.id],
+  }),
+}));
+
 // ═══════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════
@@ -336,6 +392,8 @@ export type EstimateShare = typeof estimateShares.$inferSelect;
 export type ImpersonationSession = typeof impersonationSessions.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
+export type Work = typeof works.$inferSelect;
+export type NewWork = typeof works.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {

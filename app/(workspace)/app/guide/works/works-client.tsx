@@ -11,17 +11,14 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { DataTable } from "@/components/ui/data-table";
-import { columns, Counterparty } from "./columns";
+import { columns } from "./columns";
+import { Work } from "@/lib/db/schema";
 
-const counterparties: Counterparty[] = [
-    { id: 1, name: 'ООО "СтройКомплект"', type: 'Поставщик', contactPerson: 'Иванов Иван', phone: '+7 (999) 111-22-33' },
-    { id: 2, name: 'ИП Петров А.В.', type: 'Подрядчик', contactPerson: 'Петров Алексей', phone: '+7 (999) 222-33-44' },
-    { id: 3, name: 'ЗАО "БетонСервис"', type: 'Поставщик', contactPerson: 'Сидоров Олег', phone: '+7 (999) 333-44-55' },
-    { id: 4, name: 'ООО "ЭнергоМонтаж"', type: 'Подрядчик', contactPerson: 'Кузнецов Дмитрий', phone: '+7 (999) 444-55-66' },
-    { id: 5, name: 'ООО "МеталлПром"', type: 'Поставщик', contactPerson: 'Васильев Игорь', phone: '+7 (999) 555-66-77' },
-];
+interface WorksClientProps {
+    initialData: Work[];
+}
 
-export default function CounterpartiesPage() {
+export function WorksClient({ initialData }: WorksClientProps) {
     return (
         <div className="space-y-6">
             <Breadcrumb className="px-1 md:px-0">
@@ -35,16 +32,16 @@ export default function CounterpartiesPage() {
                     </BreadcrumbItem>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                        <BreadcrumbPage>Контрагенты</BreadcrumbPage>
+                        <BreadcrumbPage>Работы</BreadcrumbPage>
                     </BreadcrumbItem>
                 </BreadcrumbList>
             </Breadcrumb>
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-1 md:px-0">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Контрагенты</h2>
+                    <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Работы</h2>
                     <p className="text-sm text-muted-foreground md:text-base">
-                        Поставщики и подрядчики
+                        Базовая стоимость и состав работ
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -67,7 +64,13 @@ export default function CounterpartiesPage() {
                 </div>
             </div>
 
-            <DataTable columns={columns} data={counterparties} height="530px" filterColumn="name" filterPlaceholder="Поиск по названию..." />
+            <DataTable
+                columns={columns}
+                data={initialData}
+                height="530px"
+                filterColumn="name"
+                filterPlaceholder="Поиск по наименованию..."
+            />
         </div>
     );
 }

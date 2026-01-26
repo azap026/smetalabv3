@@ -14,7 +14,7 @@ A SaaS application built with **Next.js**, featuring authentication, Stripe paym
 - Email/password authentication with JWTs stored to cookies
 - Global middleware to protect logged-in routes
 - Local middleware to protect Server Actions or validate Zod schemas
-- Activity logging system for any user events
+- **Advanced Directories (Guides)**: Multitenant database for Works and Materials with hybrid search support
 - Admin dashboard with permissions matrix UI
 
 ## Role-Based Access Control (RBAC)

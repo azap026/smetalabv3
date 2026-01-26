@@ -1,7 +1,10 @@
-export default function Page() {
+import { getWorks } from "@/lib/db/queries";
+import { WorksClient } from "./works-client";
+
+export default async function WorksPage() {
+    const works = await getWorks();
+
     return (
-        <div>
-            {/* TODO: Page: /app/guide/works */}
-        </div>
+        <WorksClient initialData={works} />
     );
 }

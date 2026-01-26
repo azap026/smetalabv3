@@ -5,7 +5,8 @@ import {
     permissions,
     rolePermissions,
     platformRolePermissions,
-    impersonationSessions
+    impersonationSessions,
+    type User
 } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { cache } from 'react';
@@ -67,10 +68,8 @@ export const hasPermission = cache(async function (
 
     // --- TENANT SCOPE ---
     if (permission.scope === 'tenant') {
-        // A. Superadmin Access (only via valid impersonation session)
-        if (user.platformRole === 'superadmin') {
-            if (!ctx?.impersonationSessionId) return false;
-
+        // A. Superadmin Access (via valid impersonation session)
+        if (user.platformRole === 'superadmin' && ctx?.impersonationSessionId) {
             const [session] = await db
                 .select()
                 .from(impersonationSessions)
@@ -83,15 +82,15 @@ export const hasPermission = cache(async function (
                 )
                 .limit(1);
 
-            if (!session) return false;
-
-            // Basic check: is this session for the requested tenant?
-            if (tenantId !== null && session.targetTeamId !== tenantId) return false;
-
-            return true; // Superadmin has all tenant permissions during impersonation
+            if (session) {
+                // Basic check: is this session for the requested tenant?
+                if (tenantId === null || session.targetTeamId === tenantId) {
+                    return true;
+                }
+            }
         }
 
-        // B. Regular User Access
+        // B. Regular User Access (also applies to superadmins without active impersonation)
         if (!tenantId) return false;
 
         const [member] = await db
@@ -136,18 +135,26 @@ export const hasPermission = cache(async function (
  * Useful for building the UI (menu visibility, etc).
  */
 export const getUserPermissions = cache(async function (
-    userId: number,
+    userIdOrUser: number | User,
     tenantId: number | null,
     ctx?: { impersonationSessionId?: string }
 ): Promise<Array<{ code: string; level: 'read' | 'manage' }>> {
-    const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
+    let user: User | undefined;
+
+    if (typeof userIdOrUser === 'number') {
+        const [u] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, userIdOrUser))
+            .limit(1);
+        user = u;
+    } else {
+        user = userIdOrUser;
+    }
 
     if (!user) return [];
 
+    const userId = user.id;
     const permsMap = new Map<string, 'read' | 'manage'>();
 
     // 1. Get Platform Permissions

@@ -31,6 +31,11 @@ export async function sendInvitationEmail({
   const inviteUrl = `${baseUrl}/invitations?inviteId=${inviteId}`;
   const roleLabel = ROLE_LABELS[role] || role;
 
+  console.log('--- Email Invitation ---');
+  console.log(`To: ${to}`);
+  console.log(`Link: ${inviteUrl}`);
+  console.log('------------------------');
+
   try {
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,

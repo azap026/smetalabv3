@@ -3,8 +3,9 @@ import { db } from './drizzle';
 import { activityLogs, teamMembers, teams, users } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
+import { cache } from 'react';
 
-export async function getUser() {
+export const getUser = cache(async () => {
   const sessionCookie = (await cookies()).get('session');
   if (!sessionCookie || !sessionCookie.value) {
     return null;
@@ -34,7 +35,7 @@ export async function getUser() {
   }
 
   return user[0];
-}
+});
 
 export async function getTeamByStripeCustomerId(customerId: string) {
   const result = await db
@@ -80,10 +81,15 @@ export async function getUserWithTeam(userId: number) {
 
 
 
-export async function getActivityLogs() {
-  const user = await getUser();
-  if (!user) {
-    throw new Error('User not authenticated');
+export async function getActivityLogs(userId?: number) {
+  let targetUserId = userId;
+
+  if (!targetUserId) {
+    const user = await getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    targetUserId = user.id;
   }
 
   return await db
@@ -96,7 +102,7 @@ export async function getActivityLogs() {
     })
     .from(activityLogs)
     .leftJoin(users, eq(activityLogs.userId, users.id))
-    .where(eq(activityLogs.userId, user.id))
+    .where(eq(activityLogs.userId, targetUserId))
     .orderBy(desc(activityLogs.timestamp))
     .limit(10);
 }

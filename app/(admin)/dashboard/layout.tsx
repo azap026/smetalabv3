@@ -1,10 +1,14 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin-sidebar';
+import { getUser } from '@/lib/db/queries';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = await getUser();
+  const userData = user ? { name: user.name, email: user.email } : null;
+
   return (
     <SidebarProvider>
-      <AdminSidebar />
+      <AdminSidebar user={userData} />
       <SidebarInset>
         <header className="flex h-14 items-center gap-4 border-b bg-background px-6">
           <SidebarTrigger />

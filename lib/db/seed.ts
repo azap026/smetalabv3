@@ -1,6 +1,6 @@
 import { stripe } from '../payments/stripe';
 import { db } from './drizzle';
-import { users, teams, teamMembers } from './schema';
+import { users, teams, teamMembers, notifications } from './schema';
 import { hashPassword } from '@/lib/auth/session';
 import { eq } from 'drizzle-orm';
 
@@ -82,6 +82,35 @@ async function seed() {
       role: 'admin',
     })
     .onConflictDoNothing();
+
+  // 4. Seed Notifications
+  await db.delete(notifications).where(eq(notifications.userId, user.id));
+  await db.insert(notifications).values([
+    {
+      userId: user.id,
+      teamId: team.id,
+      title: 'Новый проект создан',
+      description: 'Проект "Ремонт офиса" успешно создан',
+      read: false,
+      createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5 mins ago
+    },
+    {
+      userId: user.id,
+      teamId: team.id,
+      title: 'Смета обновлена',
+      description: 'Смета по проекту была изменена',
+      read: false,
+      createdAt: new Date(Date.now() - 60 * 60 * 1000), // 1 hour ago
+    },
+    {
+      userId: user.id,
+      teamId: team.id,
+      title: 'Закупка завершена',
+      description: 'Материалы доставлены на объект',
+      read: true,
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+    },
+  ]);
 
   console.log('✅ Base seed completed successfully.');
 

@@ -7,8 +7,7 @@ import { revalidatePath } from 'next/cache';
 
 import { db } from '@/lib/db/drizzle';
 import { works, NewWork } from '@/lib/db/schema';
-import { getUser } from '@/lib/auth/user';
-import { getTeamForUser } from '@/lib/db/queries';
+import { getUser, getTeamForUser } from '@/lib/db/queries';
 
 const requiredHeaders = ['code', 'name', 'unit', 'price'];
 
@@ -18,7 +17,7 @@ export async function importWorks(formData: FormData): Promise<{ success: boolea
         return { success: false, message: 'Пользователь не найден.' };
     }
 
-    const team = await getTeamForUser(user.id);
+    const team = await getTeamForUser();
     if (!team) {
         return { success: false, message: 'Команда не найдена.' };
     }
@@ -92,7 +91,7 @@ export async function exportWorks(): Promise<{ success: boolean; message?: strin
         return { success: false, message: 'Пользователь не найден.' };
     }
 
-    const team = await getTeamForUser(user.id);
+    const team = await getTeamForUser();
     if (!team) {
         return { success: false, message: 'Команда не найдена.' };
     }

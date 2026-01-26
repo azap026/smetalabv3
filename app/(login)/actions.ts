@@ -27,6 +27,7 @@ import {
   validatedActionWithUser
 } from '@/lib/auth/middleware';
 import { sendInvitationEmail } from '@/lib/email/email';
+import { hasPermission } from '@/lib/auth/rbac';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -432,6 +433,11 @@ export const removeTeamMember = validatedActionWithUser(
       return { error: 'User is not part of a team' };
     }
 
+    const authorized = await hasPermission(user.id, userWithTeam.teamId, 'team', 'manage');
+    if (!authorized) {
+      return { error: 'Недостаточно прав для удаления участников.' };
+    }
+
     await db
       .delete(teamMembers)
       .where(
@@ -464,6 +470,11 @@ export const inviteTeamMember = validatedActionWithUser(
 
     if (!userWithTeam?.teamId) {
       return { error: 'User is not part of a team' };
+    }
+
+    const authorized = await hasPermission(user.id, userWithTeam.teamId, 'team', 'manage');
+    if (!authorized) {
+      return { error: 'Недостаточно прав для приглашения участников.' };
     }
 
     const existingMember = await db
@@ -530,9 +541,15 @@ export const inviteTeamMember = validatedActionWithUser(
     if (!emailResult.success) {
       console.error('Failed to send invitation email:', emailResult.error);
       // Still return success - invitation was created, just email failed
-      return { success: 'Приглашение создано, но письмо не отправлено. Ссылка: ' + `${process.env.BASE_URL || 'http://localhost:3000'}/sign-up?inviteId=${newInvitation.id}` };
+      return { success: 'Приглашение создано, но письмо не отправлено. Ссылка: ' + `${process.env.BASE_URL || 'http://localhost:3000'}/invitations?inviteId=${newInvitation.id}` };
     }
 
-    return { success: 'Приглашение отправлено на ' + email };
+    let successMessage = 'Приглашение отправлено на ' + email;
+
+    if (process.env.NODE_ENV === 'development') {
+      successMessage += `. (Dev Link: ${process.env.BASE_URL || 'http://localhost:3000'}/invitations?inviteId=${newInvitation.id})`;
+    }
+
+    return { success: successMessage };
   }
 );

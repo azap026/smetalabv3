@@ -68,10 +68,8 @@ export const hasPermission = cache(async function (
 
     // --- TENANT SCOPE ---
     if (permission.scope === 'tenant') {
-        // A. Superadmin Access (only via valid impersonation session)
-        if (user.platformRole === 'superadmin') {
-            if (!ctx?.impersonationSessionId) return false;
-
+        // A. Superadmin Access (via valid impersonation session)
+        if (user.platformRole === 'superadmin' && ctx?.impersonationSessionId) {
             const [session] = await db
                 .select()
                 .from(impersonationSessions)
@@ -84,15 +82,15 @@ export const hasPermission = cache(async function (
                 )
                 .limit(1);
 
-            if (!session) return false;
-
-            // Basic check: is this session for the requested tenant?
-            if (tenantId !== null && session.targetTeamId !== tenantId) return false;
-
-            return true; // Superadmin has all tenant permissions during impersonation
+            if (session) {
+                // Basic check: is this session for the requested tenant?
+                if (tenantId === null || session.targetTeamId === tenantId) {
+                    return true;
+                }
+            }
         }
 
-        // B. Regular User Access
+        // B. Regular User Access (also applies to superadmins without active impersonation)
         if (!tenantId) return false;
 
         const [member] = await db

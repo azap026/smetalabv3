@@ -15,6 +15,7 @@ import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import useSWR, { mutate } from 'swr';
 import { User as UserType } from '@/lib/db/schema';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -26,6 +27,7 @@ type UserWithPermissions = UserType & {
 export function UserMenu() {
     const { data: user } = useSWR<UserWithPermissions>('/api/user', fetcher);
     const router = useRouter();
+    const { hasPermission } = usePermissions();
 
     async function handleSignOut() {
         await signOut();
@@ -76,20 +78,24 @@ export function UserMenu() {
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/app/team')}>
-                    <Users className="mr-2 h-4 w-4" />
-                    <span>Команда</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/app/settings')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Настройки</span>
-                </DropdownMenuItem>
-                {(user.permissions?.includes('tenants.view') || user.isAdmin) && (
+                {hasPermission('team', 'read') && (
+                    <DropdownMenuItem onClick={() => router.push('/app/team')}>
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Команда</span>
+                    </DropdownMenuItem>
+                )}
+                {hasPermission('settings', 'read') && (
+                    <DropdownMenuItem onClick={() => router.push('/app/settings')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Настройки</span>
+                    </DropdownMenuItem>
+                )}
+                {hasPermission('platform.tenants', 'read') && (
                     <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => router.push('/dashboard')}>
                             <Shield className="mr-2 h-4 w-4" />
-                            <span>Admin Panel</span>
+                            <span>Платформа</span>
                         </DropdownMenuItem>
                     </>
                 )}

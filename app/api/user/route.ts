@@ -36,7 +36,7 @@ export async function GET() {
 
   const teamId = result[0]?.teamId ?? null;
   // Get all permissions correctly (platform + tenant) with levels
-  const userPermissions = await getUserPermissions(user.id, teamId);
+  const userPermissions = await getUserPermissions(user, teamId);
 
   return Response.json({
     ...user,

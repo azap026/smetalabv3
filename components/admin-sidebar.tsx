@@ -19,9 +19,12 @@ import {
     Activity,
     Shield,
     Key,
+    LogOut,
+    User as UserIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { User } from '@/lib/db/schema';
 
 const adminNavItems = [
     {
@@ -56,7 +59,7 @@ const adminNavItems = [
     },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ user }: { user: Pick<User, 'name' | 'email'> | null }) {
     const pathname = usePathname();
 
     return (
@@ -92,7 +95,34 @@ export function AdminSidebar() {
                 </SidebarGroup>
             </SidebarContent>
             <SidebarFooter>
-                {/* TODO: Admin user info / back to app link */}
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            size="lg"
+                            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                        >
+                            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                                <UserIcon className="size-4" />
+                            </div>
+                            <div className="grid flex-1 text-left text-sm leading-tight">
+                                <span className="truncate font-semibold">
+                                    {user?.name || 'Admin'}
+                                </span>
+                                <span className="truncate text-xs">
+                                    {user?.email || ''}
+                                </span>
+                            </div>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                            <Link href="/">
+                                <LogOut />
+                                <span>Back to App</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
             </SidebarFooter>
         </Sidebar>
     );

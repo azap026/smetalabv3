@@ -1,6 +1,5 @@
 'use server';
 
-import { z } from 'zod';
 import { and, eq, isNull, or } from 'drizzle-orm';
 import * as xlsx from 'xlsx';
 import { revalidatePath } from 'next/cache';
@@ -32,7 +31,7 @@ export async function importWorks(formData: FormData): Promise<{ success: boolea
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const data = xlsx.utils.sheet_to_json(sheet) as Record<string, any>[];
+        const data: Record<string, string | number>[] = xlsx.utils.sheet_to_json(sheet);
 
         if (data.length === 0) {
             return { success: false, message: 'Файл пуст.' };
@@ -85,7 +84,7 @@ export async function importWorks(formData: FormData): Promise<{ success: boolea
     }
 }
 
-export async function exportWorks(): Promise<{ success: boolean; message?: string; data?: any[] }> {
+export async function exportWorks(): Promise<{ success: boolean; message?: string; data?: Record<string, unknown>[] }> {
     const user = await getUser();
     if (!user) {
         return { success: false, message: 'Пользователь не найден.' };

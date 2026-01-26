@@ -1,10 +1,20 @@
 'use client';
 import React, { createContext, useContext, useCallback } from 'react';
 
-const ToastContext = createContext({ toast: (opts: any) => {} });
+interface ToastOptions {
+  title: string;
+  description?: string;
+  variant?: 'default' | 'destructive';
+}
+
+const ToastContext = createContext({
+  toast: (_opts: ToastOptions) => {},
+});
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const toast = useCallback((opts: any) => {
+  const toast = useCallback((opts: ToastOptions) => {
+    // This is a placeholder implementation.
+    // In a real app, this would trigger a visual toast notification.
     console.log('[Toast]:', opts.title, opts.description);
   }, []);
   return (

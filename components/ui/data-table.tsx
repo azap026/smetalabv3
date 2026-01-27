@@ -9,99 +9,25 @@ import {
     flexRender,
     getCoreRowModel,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table"
 import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from "lucide-react"
+import { TableVirtuoso } from "react-virtuoso"
 
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 
 /* -------------------------------------------------------------------------- */
-/*                               Table Primitives                             */
-/* -------------------------------------------------------------------------- */
-
-const Table = React.forwardRef<
-    HTMLTableElement,
-    React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-    <table
-        ref={ref}
-        className={cn("w-full caption-bottom text-sm", className)}
-        {...props}
-    />
-))
-Table.displayName = "Table"
-
-const TableHeader = React.forwardRef<
-    HTMLTableSectionElement,
-    React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-    <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
-))
-TableHeader.displayName = "TableHeader"
-
-const TableBody = React.forwardRef<
-    HTMLTableSectionElement,
-    React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-    <tbody
-        ref={ref}
-        className={cn("[&_tr:last-child]:border-0", className)}
-        {...props}
-    />
-))
-TableBody.displayName = "TableBody"
-
-const TableRow = React.forwardRef<
-    HTMLTableRowElement,
-    React.HTMLAttributes<HTMLTableRowElement>
->(({ className, ...props }, ref) => (
-    <tr
-        ref={ref}
-        className={cn(
-            "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
-            className
-        )}
-        {...props}
-    />
-))
-TableRow.displayName = "TableRow"
-
-const TableHead = React.forwardRef<
-    HTMLTableCellElement,
-    React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-    <th
-        ref={ref}
-        className={cn(
-            "h-10 px-2 text-left align-middle font-medium text-muted-foreground border-b [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
-            className
-        )}
-        {...props}
-    />
-))
-TableHead.displayName = "TableHead"
-
-const TableCell = React.forwardRef<
-    HTMLTableCellElement,
-    React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-    <td
-        ref={ref}
-        className={cn(
-            "p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
-            className
-        )}
-        {...props}
-    />
-))
-TableCell.displayName = "TableCell"
-
-/* -------------------------------------------------------------------------- */
 /*                               DataTable                                    */
 /* -------------------------------------------------------------------------- */
+
+export interface TableMeta<TData> {
+    onInsertRequest?: (id?: string) => void
+    onCancelInsert?: () => void
+    onSaveInsert?: (id: string) => void
+    updatePlaceholderRow?: (id: string, data: Partial<TData>) => void
+}
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]
@@ -109,14 +35,16 @@ interface DataTableProps<TData, TValue> {
     height?: string
     filterColumn?: string
     filterPlaceholder?: string
+    meta?: TableMeta<TData>
 }
 
 export function DataTable<TData, TValue>({
     columns,
     data,
-    height = "530px",
+    height = "600px",
     filterColumn,
     filterPlaceholder = "Поиск...",
+    meta,
 }: DataTableProps<TData, TValue>) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -132,26 +60,60 @@ export function DataTable<TData, TValue>({
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
+        getRowId: (row) => (row as { id: string }).id,
+        meta,
         state: {
             sorting,
             columnFilters,
             columnVisibility,
             rowSelection,
         },
-        initialState: {
-            pagination: {
-                pageSize: 100,
-            }
-        }
     })
+
+    const { rows } = table.getRowModel()
+
+    // Components mapping for Virtuoso to maintain table structure and alignment
+    const TableComponents = React.useMemo(() => ({
+        Table: ({ children, style, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
+            <table
+                {...props}
+                style={{
+                    ...style,
+                    width: '100%',
+                    tableLayout: 'fixed',
+                    borderCollapse: 'separate',
+                    borderSpacing: 0
+                }}
+            >
+                <colgroup>
+                    {table.getFlatHeaders().map((header) => (
+                        <col
+                            key={header.id}
+                            style={{ width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : 'auto' }}
+                        />
+                    ))}
+                </colgroup>
+                {children}
+            </table>
+        ),
+        TableHead: React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
+            <thead {...props} ref={ref} className="z-40" />
+        )),
+        TableRow: (props: React.HTMLAttributes<HTMLTableRowElement>) => (
+            <tr {...props} className="border-b last:border-0 hover:bg-muted/30 transition-colors group group/row" />
+        ),
+        TableBody: React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
+            <tbody {...props} ref={ref} />
+        )),
+    }), [table])
 
     return (
         <div className="space-y-4">
+            {/* Search Filter */}
             {filterColumn && (
                 <div className="relative flex items-center px-1 md:px-0">
                     <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
@@ -165,82 +127,87 @@ export function DataTable<TData, TValue>({
                     />
                 </div>
             )}
-            <div className="rounded-md border overflow-hidden shadow-sm bg-card">
-                <div
-                    className="relative overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/20"
+
+            {/* Virtualized Table */}
+            <div className="rounded-md border shadow-sm bg-card overflow-hidden">
+                <TableVirtuoso
                     style={{ height }}
-                >
-                    <Table className="relative border-separate border-spacing-0">
-                        <TableHeader className="sticky top-0 bg-background z-40 shadow-sm">
+                    data={rows}
+                    components={TableComponents}
+                    fixedHeaderContent={() => (
+                        <>
                             {table.getHeaderGroups().map((headerGroup) => (
-                                <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
+                                <tr key={headerGroup.id} className="bg-background shadow-[0_1px_0_0_rgba(0,0,0,0.1)]">
                                     {headerGroup.headers.map((header) => {
                                         const isSortable = header.column.getCanSort()
                                         const sortDirection = header.column.getIsSorted()
 
                                         return (
-                                            <TableHead key={header.id} className="h-12 bg-muted/50 transition-colors">
+                                            <th
+                                                key={header.id}
+                                                className="h-12 px-3 text-left align-middle font-medium text-muted-foreground bg-muted/50 border-b border-r last:border-r-0 transition-colors"
+                                            >
                                                 {header.isPlaceholder ? null : (
                                                     <div
                                                         className={cn(
-                                                            "flex items-center gap-2 select-none",
-                                                            isSortable && "cursor-pointer hover:text-foreground transition-colors"
+                                                            "flex items-center gap-2 select-none w-full",
+                                                            isSortable && "cursor-pointer hover:text-foreground"
                                                         )}
                                                         onClick={header.column.getToggleSortingHandler()}
                                                     >
-                                                        {flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
+                                                        <div className="truncate flex-1">
+                                                            {flexRender(
+                                                                header.column.columnDef.header,
+                                                                header.getContext()
+                                                            )}
+                                                        </div>
                                                         {isSortable && (
-                                                            <div className="w-4">
+                                                            <div className="shrink-0 w-4">
                                                                 {sortDirection === "asc" ? (
                                                                     <ChevronUp className="h-4 w-4" />
                                                                 ) : sortDirection === "desc" ? (
                                                                     <ChevronDown className="h-4 w-4" />
                                                                 ) : (
-                                                                    <ChevronsUpDown className="h-4 w-4 opacity-30 group-hover/header:opacity-100" />
+                                                                    <ChevronsUpDown className="h-4 w-4 opacity-30" />
                                                                 )}
                                                             </div>
                                                         )}
                                                     </div>
                                                 )}
-                                            </TableHead>
+                                            </th>
                                         )
                                     })}
-                                </TableRow>
+                                </tr>
                             ))}
-                        </TableHeader>
-                        <TableBody>
-                            {table.getRowModel().rows?.length ? (
-                                table.getRowModel().rows.map((row) => (
-                                    <TableRow
-                                        key={row.id}
-                                        data-state={row.getIsSelected() && "selected"}
-                                        className="group hover:bg-muted/30 transition-colors border-b last:border-0"
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id} className="py-3">
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext()
-                                                )}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={columns.length}
-                                        className="h-24 text-center text-muted-foreground"
-                                    >
-                                        Ничего не найдено.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                        </>
+                    )}
+                    itemContent={(_index, row) => (
+                        <>
+                            {row.getVisibleCells().map((cell) => (
+                                <td
+                                    key={cell.id}
+                                    className="p-3 align-middle border-b border-r last:border-r-0 overflow-hidden"
+                                >
+                                    <div className="truncate w-full text-xs md:text-sm">
+                                        {flexRender(
+                                            cell.column.columnDef.cell,
+                                            cell.getContext()
+                                        )}
+                                    </div>
+                                </td>
+                            ))}
+                        </>
+                    )}
+                />
+            </div>
+
+            {/* Footer / Row Count */}
+            <div className="flex items-center justify-between px-1 md:px-0">
+                <div className="text-xs md:text-sm text-muted-foreground font-medium">
+                    Всего записей: <span className="text-foreground">{data.length}</span>
+                    {table.getFilteredRowModel().rows.length !== data.length && (
+                        <> (отфильтровано: <span className="text-foreground">{table.getFilteredRowModel().rows.length}</span>)</>
+                    )}
                 </div>
             </div>
         </div>

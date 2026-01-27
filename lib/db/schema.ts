@@ -240,6 +240,7 @@ export const works = pgTable('works', {
   shortDescription: text('short_description'),
   description: text('description'),
 
+  phase: text('phase'),
   category: text('category'),
   subcategory: text('subcategory'),
   tags: text('tags').array(), // pgCore text array
@@ -255,7 +256,7 @@ export const works = pgTable('works', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => [
   index('works_tenant_status_idx').on(table.tenantId).where(sql`deleted_at IS NULL AND status = 'active'`),
-  index('works_code_tenant_idx').on(table.tenantId, table.code).where(sql`deleted_at IS NULL`),
+  uniqueIndex('idx_works_code_tenant_unique').on(table.tenantId, table.code),
 ]);
 
 // ═══════════════════════════════════════════════════════════════

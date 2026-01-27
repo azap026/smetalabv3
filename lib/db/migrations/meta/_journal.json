@@ -57,6 +57,20 @@
       "when": 1769442142221,
       "tag": "0007_dizzy_harpoon",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769498407002,
+      "tag": "0008_brainy_red_shift",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769499921594,
+      "tag": "0009_nappy_serpent_society",
+      "breakpoints": true
     }
   ]
 }

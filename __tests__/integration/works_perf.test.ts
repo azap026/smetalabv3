@@ -26,8 +26,8 @@ const testTeam: NewTeam = { id: 8888, name: 'Perf Team' };
 describe('Works Reordering Performance', () => {
     beforeEach(async () => {
         // Cleanup
-        await db.delete(works).where(eq(works.tenantId, testTeam.id));
-        await db.delete(teamMembers).where(eq(teamMembers.teamId, testTeam.id));
+        await db.delete(works).where(eq(works.tenantId, testTeam.id!));
+        await db.delete(teamMembers).where(eq(teamMembers.teamId, testTeam.id!));
         await db.delete(users).where(eq(users.id, testUser.id!));
         await db.delete(teams).where(eq(teams.id, testTeam.id!));
 
@@ -41,12 +41,12 @@ describe('Works Reordering Performance', () => {
 
         // Mock return values
         vi.mocked(getUser).mockResolvedValue(insertedUser);
-        vi.mocked(getTeamForUser).mockResolvedValue(insertedTeam);
+        vi.mocked(getTeamForUser).mockResolvedValue(insertedTeam as any);
     });
 
     afterEach(async () => {
-        await db.delete(works).where(eq(works.tenantId, testTeam.id));
-        await db.delete(teamMembers).where(eq(teamMembers.teamId, testTeam.id));
+        await db.delete(works).where(eq(works.tenantId, testTeam.id!));
+        await db.delete(teamMembers).where(eq(teamMembers.teamId, testTeam.id!));
         await db.delete(users).where(eq(users.id, testUser.id!));
         await db.delete(teams).where(eq(teams.id, testTeam.id!));
         vi.resetAllMocks();
@@ -57,7 +57,7 @@ describe('Works Reordering Performance', () => {
         const worksToInsert: NewWork[] = [];
         for (let i = 0; i < NUM_WORKS; i++) {
             worksToInsert.push({
-                tenantId: testTeam.id,
+                tenantId: testTeam.id!,
                 code: `9.${i + 1}`, // Wrong prefix to force reordering (9.x -> 1.x)
                 name: `Work ${i}`,
                 status: 'active',
@@ -75,7 +75,7 @@ describe('Works Reordering Performance', () => {
 
         // Verify order
         const reorderedWorks = await db.query.works.findMany({
-            where: eq(works.tenantId, testTeam.id),
+            where: eq(works.tenantId, testTeam.id!),
         });
 
         // Sort using natural sort order to match logical expectations

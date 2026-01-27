@@ -123,12 +123,7 @@ export async function importWorks(formData: FormData): Promise<{ success: boolea
         for (let i = 0; i < newWorks.length; i += BATCH_SIZE) {
             const batch = newWorks.slice(i, i + BATCH_SIZE);
             await Promise.all(batch.map(async (work) => {
-                const textToEmbed = [
-                    work.name,
-                    work.category,
-                    work.subcategory,
-                    work.unit
-                ].filter(Boolean).join(' ');
+                const textToEmbed = `Работа: ${work.name}. Раздел: ${work.category || '—'}. Подраздел: ${work.subcategory || '—'}. Ед.изм: ${work.unit || '—'}.`;
                 work.embedding = await generateEmbedding(textToEmbed);
             }));
         }
@@ -292,12 +287,7 @@ export async function updateWork(id: string, data: Partial<NewWork>): Promise<{ 
             });
 
             if (currentWork) {
-                const textToEmbed = [
-                    data.name ?? currentWork.name,
-                    data.category ?? currentWork.category,
-                    data.subcategory ?? currentWork.subcategory,
-                    data.unit ?? currentWork.unit
-                ].filter(Boolean).join(' ');
+                const textToEmbed = `Работа: ${data.name ?? currentWork.name}. Раздел: ${data.category ?? currentWork.category ?? '—'}. Подраздел: ${data.subcategory ?? currentWork.subcategory ?? '—'}. Ед.изм: ${data.unit ?? currentWork.unit ?? '—'}.`;
 
                 embedding = await generateEmbedding(textToEmbed);
             }
@@ -332,7 +322,7 @@ export async function createWork(data: NewWork): Promise<{ success: boolean; mes
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
     try {
-        const textToEmbed = [data.name, data.category, data.subcategory, data.unit].filter(Boolean).join(' ');
+        const textToEmbed = `Работа: ${data.name}. Раздел: ${data.category || '—'}. Подраздел: ${data.subcategory || '—'}. Ед.изм: ${data.unit || '—'}.`;
         const embedding = await generateEmbedding(textToEmbed);
 
         await db.insert(works).values({
@@ -573,10 +563,37 @@ export async function searchWorks(query: string): Promise<{ success: boolean; da
             .orderBy(sql`${works.embedding} <=> ${JSON.stringify(queryEmbedding)}`)
             .limit(100);
 
-        console.timeEnd(`searchWorks:${query}`);
-        console.log(`Found ${results.length} results`);
+        // --- Hybrid Keyword Boosting ---
+        const queryTokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
 
-        return { success: true, data: results };
+        const boostedResults = results.map(row => {
+            let boost = 0;
+            const nameLower = (row.name || "").toLowerCase();
+            const categoryLower = (row.category || "").toLowerCase();
+
+            // Check each keyword for a boost
+            queryTokens.forEach(token => {
+                // Name matches are very important
+                if (nameLower.includes(token)) boost += 0.25;
+                // Category matches are helpful but less important
+                if (categoryLower.includes(token)) boost += 0.05;
+            });
+
+            return {
+                ...row,
+                boostedScore: (row.similarity || 0) + boost
+            };
+        });
+
+        // Filter out absolute noise (< 0.25 similarity) and Sort by boosted score
+        const finalData = boostedResults
+            .filter(r => (r.similarity || 0) > 0.25)
+            .sort((a, b) => b.boostedScore - a.boostedScore);
+
+        console.timeEnd(`searchWorks:${query}`);
+        console.log(`Found ${results.length} results, after hybrid filter: ${finalData.length}`);
+
+        return { success: true, data: finalData };
 
     } catch (error) {
         console.error('Vector search error:', error);

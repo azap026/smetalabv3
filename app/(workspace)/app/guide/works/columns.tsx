@@ -29,7 +29,6 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import {
     Tooltip,
@@ -446,34 +445,6 @@ export const columns: ColumnDef<WorkRow>[] = [
             }).format(isNaN(price) ? 0 : price)
 
             return <div className="text-center font-bold text-xs md:text-sm">{formatted}</div>
-        },
-    },
-    {
-        accessorKey: "similarity",
-        header: () => <div className="text-center pr-2">ИИ Точность</div>,
-        size: 90,
-        cell: ({ row }) => {
-            const similarity = row.original.similarity;
-            if (similarity === undefined) return null;
-            const percentage = Math.round(similarity * 100);
-
-            let color = "bg-emerald-50 text-emerald-600 border-emerald-100";
-            if (percentage < 45) color = "bg-red-50 text-red-600 border-red-100";
-            else if (percentage < 75) color = "bg-amber-50 text-amber-600 border-amber-100";
-
-            return (
-                <div className="flex justify-center pr-2">
-                    <span
-                        className={cn(
-                            "px-1.5 py-0.5 rounded border text-[10px] font-bold whitespace-nowrap tracking-tight",
-                            color
-                        )}
-                        title={`Коэффициент схожести: ${similarity.toFixed(4)}`}
-                    >
-                        {percentage}%
-                    </span>
-                </div>
-            );
         },
     },
     {

@@ -185,11 +185,11 @@ export async function getWorks() {
   )();
 }
 
-export async function getMaterials() {
+export async function getMaterials(limit?: number) {
   const team = await getTeamForUser();
   const teamId = team?.id;
 
-  return await db
+  let query = db
     .select({
       id: materials.id,
       tenantId: materials.tenantId,
@@ -217,6 +217,13 @@ export async function getMaterials() {
           : isNull(materials.tenantId)
       )
     )
-    .orderBy(materials.code) as unknown as MaterialRow[];
+    .orderBy(materials.code);
+
+  if (limit) {
+    // @ts-expect-error - constructing query dynamically
+    query = query.limit(limit);
+  }
+
+  return await query as unknown as MaterialRow[];
 }
 

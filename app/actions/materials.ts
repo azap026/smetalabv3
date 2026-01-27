@@ -9,6 +9,20 @@ import { materials, NewMaterial } from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { generateEmbedding } from '@/lib/ai/embeddings';
 import { MaterialRow } from '@/types/material-row';
+import { getMaterials } from '@/lib/db/queries';
+
+export async function fetchMoreMaterials(): Promise<{ success: boolean; data?: MaterialRow[] }> {
+    try {
+        const materials = await getMaterials(100000); // Fetch explicit large amount or all. getMaterials logic handles no arg as all? No, I updated getMaterials to take limit.
+        // Wait, I updated getMaterials(limit?: number). If I pass nothing, limit is undefined, query returns all.
+        // But to be explicit, let's just call getMaterials().
+
+        return { success: true, data: materials };
+    } catch (e) {
+        console.error("Failed to fetch more materials", e);
+        return { success: false };
+    }
+}
 
 const headerMap: Record<string, string> = {
     'Код': 'code',

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
-import { exportMaterials, deleteAllMaterials, createMaterial, searchMaterials } from '@/app/actions/materials';
+import { exportMaterials, deleteAllMaterials, createMaterial, searchMaterials, fetchMoreMaterials } from '@/app/actions/materials';
 import * as xlsx from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -47,6 +47,7 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
     const [isImporting, startImportTransition] = useTransition();
     const [isDeletingAll, startDeleteAllTransition] = useTransition();
     const [isAiSearching, startAiSearchTransition] = useTransition();
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [mounted, setMounted] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,10 +55,32 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
         setMounted(true);
     }, []);
 
+    // Main data state
     const [data, setData] = useState<MaterialRow[]>(initialData);
 
     useEffect(() => {
         setData(initialData);
+
+        // Lazy load the rest if we likely have more
+        // Or just always try to fetch fresh full list to ensure consistency and cache-busting
+        const loadRest = async () => {
+            setIsLoadingMore(true);
+            try {
+                const res = await fetchMoreMaterials();
+                if (res.success && res.data && res.data.length > initialData.length) {
+                    setData(res.data);
+                }
+            } catch (e) {
+                console.error("Failed to load full materials", e);
+            } finally {
+                setIsLoadingMore(false);
+            }
+        };
+
+        // Short timeout to let the UI paint first
+        const timer = setTimeout(loadRest, 100);
+        return () => clearTimeout(timer);
+
     }, [initialData]);
 
     const handleExport = () => {
@@ -236,8 +259,13 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-1 md:px-0">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Материалы</h2>
-                    <p className="text-sm text-muted-foreground md:text-base">База строительных материалов</p>
+                    <h2 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-2">
+                        Материалы
+                        {isLoadingMore && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+                    </h2>
+                    <p className="text-sm text-muted-foreground md:text-base">
+                        Справочник материалов и оборудования {isLoadingMore && "(загрузка полного списка...)"}
+                    </p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
                     {mounted && (

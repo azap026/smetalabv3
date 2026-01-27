@@ -4,10 +4,13 @@ const nextConfig: NextConfig = {
   typescript: {
     tsconfigPath: './tsconfig.json',
   },
-  /* experimental: {
-    ppr: true,
-    clientSegmentCache: true
-  } */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+    /* ppr: true,
+    clientSegmentCache: true */
+  }
 };
 
 export default nextConfig;

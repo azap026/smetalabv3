@@ -159,6 +159,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
                 tags: null,
                 metadata: {},
                 embedding: null,
+                sortOrder: null,
                 isPlaceholder: true
             };
             setData([...data, placeholder]);
@@ -187,6 +188,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
             tags: null,
             metadata: {},
             embedding: null,
+            sortOrder: null,
             isPlaceholder: true
         };
 

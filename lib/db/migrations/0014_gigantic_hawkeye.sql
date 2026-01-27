@@ -1,0 +1,2 @@
+ALTER TABLE "works" ADD COLUMN "sort_order" integer[] GENERATED ALWAYS AS (CASE WHEN code ~ '^[0-9]+(\.[0-9]+)*$' THEN string_to_array(code, '.')::integer[] ELSE NULL END) STORED;--> statement-breakpoint
+CREATE INDEX "works_sort_order_idx" ON "works" USING btree ("sort_order");

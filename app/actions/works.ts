@@ -1,6 +1,6 @@
 'use server';
 
-import { and, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import * as xlsx from 'xlsx';
 import { revalidatePath } from 'next/cache';
 
@@ -404,18 +404,35 @@ export async function reorderWorks(): Promise<{ success: boolean; message: strin
 
         if (toUpdate.length > 0) {
             await db.transaction(async (tx) => {
-                // 1. Set to temp codes to avoid unique constraint violations
-                for (const item of toUpdate) {
-                    await tx.update(works)
-                        .set({ code: `TMP-${item.id}-${Math.random().toString(36).substring(7)}` })
-                        .where(eq(works.id, item.id));
-                }
-                // 2. Set to final codes
-                for (const item of toUpdate) {
-                    await tx.update(works)
-                        .set({ code: item.newCode, updatedAt: new Date() })
-                        .where(eq(works.id, item.id));
-                }
+                // 1. Batch update to Temp codes
+                const tempUpdates = toUpdate.map(item => ({
+                    id: item.id,
+                    code: `TMP-${item.id}-${Math.floor(Math.random() * 10000)}`
+                }));
+
+                // Construct CASE statement for Temp Code Update
+                const tempCase = sql`CASE ${sql.join(
+                    tempUpdates.map(u => sql`WHEN id = ${u.id} THEN ${u.code}`),
+                    sql` `
+                )} END`;
+
+                await tx.update(works)
+                    .set({ code: tempCase })
+                    .where(
+                        inArray(works.id, tempUpdates.map(u => u.id))
+                    );
+
+                // 2. Batch update to Final codes
+                const finalCase = sql`CASE ${sql.join(
+                    toUpdate.map(u => sql`WHEN id = ${u.id} THEN ${u.newCode}`),
+                    sql` `
+                )} END`;
+
+                await tx.update(works)
+                    .set({ code: finalCase, updatedAt: new Date() })
+                    .where(
+                        inArray(works.id, toUpdate.map(u => u.id))
+                    );
             });
         }
 

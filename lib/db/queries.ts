@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, or } from 'drizzle-orm';
+import { desc, and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from './drizzle';
 import { activityLogs, teamMembers, teams, users, works } from './schema';
 import { cookies } from 'next/headers';
@@ -152,5 +152,5 @@ export async function getWorks() {
           : isNull(works.tenantId)
       )
     )
-    .orderBy(works.code);
+    .orderBy(sql`string_to_array(${works.code}, '.')::bigint[]`);
 }

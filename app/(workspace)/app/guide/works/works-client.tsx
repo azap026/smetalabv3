@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useTransition } from 'react';
+import * as React from 'react';
+import { useRef, useTransition, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Upload, Download, Trash2, Loader2 } from 'lucide-react';
+import { Upload, Download, Trash2, Loader2 } from 'lucide-react';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -14,9 +15,24 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
 import { Work } from "@/lib/db/schema";
-import { importWorks, exportWorks } from './actions';
+import { importWorks, exportWorks, deleteAllWorks, insertWorkAfter } from './actions';
 import * as xlsx from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+export type WorkRow = Work & {
+    isPlaceholder?: boolean;
+};
 
 interface WorksClientProps {
     initialData: Work[];
@@ -26,7 +42,15 @@ export function WorksClient({ initialData }: WorksClientProps) {
     const { toast } = useToast();
     const [isExporting, startExportTransition] = useTransition();
     const [isImporting, startImportTransition] = useTransition();
+    const [isDeletingAll, startDeleteAllTransition] = useTransition();
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Main data state
+    const [data, setData] = useState<WorkRow[]>(initialData);
+
+    useEffect(() => {
+        setData(initialData);
+    }, [initialData]);
 
     const handleExport = () => {
         startExportTransition(async () => {
@@ -64,7 +88,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
                 const result = await importWorks(formData);
                 if (result.success) {
                     toast({
-                        title: "Импорт успешен",
+                        title: "Импорт завершен",
                         description: result.message,
                     });
                 } else {
@@ -76,10 +100,140 @@ export function WorksClient({ initialData }: WorksClientProps) {
                 }
             });
         }
-        // Reset file input to allow re-uploading the same file
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
+    };
+
+    const handleDeleteAll = () => {
+        startDeleteAllTransition(async () => {
+            const result = await deleteAllWorks();
+            if (result.success) {
+                toast({
+                    title: "Справочник очищен",
+                    description: result.message,
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Ошибка при очистке",
+                    description: result.message,
+                });
+            }
+        });
+    };
+
+
+
+    // --- Inline Insertion Logic ---
+    const [isInserting, startInsertTransition] = useTransition();
+
+    const onInsertRequest = (afterId?: string) => {
+        if (data.some(r => r.isPlaceholder)) return;
+
+        // If no ID provided or data is empty, add to the end (or start if empty)
+        if (!afterId || data.length === 0) {
+            const placeholder: WorkRow = {
+                id: 'placeholder-' + Date.now(),
+                tenantId: initialData[0]?.tenantId || null, // Fallback if empty
+                code: data.length > 0 ? `${data.length + 1}` : '1.1', // Simple auto-increment guess
+                name: '',
+                unit: '',
+                price: 0,
+                phase: data.length > 0 ? data[data.length - 1].phase : 'Этап 1',
+                category: data.length > 0 ? data[data.length - 1].category : '',
+                subcategory: data.length > 0 ? data[data.length - 1].subcategory : '',
+                status: 'draft',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                deletedAt: null,
+                shortDescription: null,
+                description: null,
+                tags: null,
+                metadata: {},
+                isPlaceholder: true
+            };
+            setData([...data, placeholder]);
+            return;
+        }
+
+        const index = data.findIndex(r => r.id === afterId);
+        if (index === -1) return;
+
+        const placeholder: WorkRow = {
+            id: 'placeholder-' + Date.now(),
+            tenantId: data[index].tenantId,
+            code: '',
+            name: '',
+            unit: '',
+            price: 0,
+            phase: data[index].phase,
+            category: data[index].category,
+            subcategory: data[index].subcategory,
+            status: 'draft',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+            shortDescription: null,
+            description: null,
+            tags: null,
+            metadata: {},
+            isPlaceholder: true
+        };
+
+        const newData = [...data];
+        newData.splice(index + 1, 0, placeholder);
+        setData(newData);
+    };
+
+    const onCancelInsert = () => {
+        setData(data.filter(r => !r.isPlaceholder));
+    };
+
+    const updatePlaceholderRow = (placeholderId: string, partial: Partial<WorkRow>) => {
+        setData(prev => prev.map(row =>
+            row.id === placeholderId ? { ...row, ...partial } : row
+        ));
+    };
+
+    const onSaveInsert = (placeholderId: string) => {
+        const row = data.find(r => r.id === placeholderId);
+        if (!row) return;
+
+        if (!row.name) {
+            toast({ variant: "destructive", title: "Ошибка", description: "Введите название работы." });
+            return;
+        }
+        if (!row.unit) {
+            toast({ variant: "destructive", title: "Ошибка", description: "Выберите единицу измерения." });
+            return;
+        }
+        if (row.price != null && row.price < 0) {
+            toast({ variant: "destructive", title: "Ошибка", description: "Цена не может быть отрицательной." });
+            return;
+        }
+
+        startInsertTransition(async () => {
+            const placeholderIndex = data.findIndex(r => r.id === placeholderId);
+            const anchorWork = placeholderIndex > 0 ? data[placeholderIndex - 1] : null;
+
+            const result = await insertWorkAfter(anchorWork ? anchorWork.id : null, {
+                code: row.code,
+                name: row.name,
+                unit: row.unit,
+                price: Number(row.price),
+                phase: row.phase,
+                category: row.category,
+                subcategory: row.subcategory,
+                status: 'active'
+            });
+
+            if (result.success) {
+                toast({ title: "Запись вставлена", description: result.message });
+            } else {
+                toast({ variant: "destructive", title: "Ошибка", description: result.message });
+            }
+        });
     };
 
     return (
@@ -115,6 +269,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
+
                     <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleImportClick} disabled={isImporting}>
                         {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                         Импорт
@@ -123,24 +278,68 @@ export function WorksClient({ initialData }: WorksClientProps) {
                         {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                         Экспорт
                     </Button>
-                    <Button variant="destructive" className="flex-1 md:flex-none h-9 text-xs md:text-sm" disabled>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Удалить
-                    </Button>
-                    <Button className="flex-1 md:flex-none h-9 text-xs md:text-sm">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Добавить
-                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button
+                                variant="destructive"
+                                className="flex-1 md:flex-none h-9 text-xs md:text-sm"
+                                disabled={isDeletingAll || initialData.length === 0}
+                            >
+                                {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                Удалить всё
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Это действие необратимо. Весь справочник работ для вашей команды будет полностью удален.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handleDeleteAll}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                    Удалить всё
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+
+
                 </div>
             </div>
 
-            <DataTable
-                columns={columns}
-                data={initialData}
-                height="530px"
-                filterColumn="name"
-                filterPlaceholder="Поиск по наименованию..."
-            />
+            <div className="relative">
+                {(isImporting || isInserting) && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-[1px] rounded-lg">
+                        <div className="flex flex-col items-center gap-3 p-6 bg-card border shadow-xl rounded-xl animate-in fade-in zoom-in duration-200">
+                            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                            <div className="flex flex-col items-center gap-1">
+                                <p className="text-sm font-semibold">
+                                    {isInserting ? "Сохранение записи..." : "Идет импорт данных..."}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Пожалуйста, подождите</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                <DataTable
+                    columns={columns}
+                    data={data}
+                    height="600px"
+                    filterColumn="name"
+                    filterPlaceholder="Поиск по наименованию..."
+                    meta={{
+                        onInsertRequest,
+                        onCancelInsert,
+                        onSaveInsert,
+                        updatePlaceholderRow
+                    }}
+                />
+            </div>
         </div>
     );
 }

@@ -1,10 +1,15 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function generateEmbedding(text: string): Promise<number[] | null> {
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+        console.error('CRITICAL: OPENAI_API_KEY is not defined in environment variables!');
+        return null;
+    }
+
+    const openai = new OpenAI({ apiKey });
+
     if (!text) return null;
     // Clean newlines
     const cleanGeneric = text.replace(/\n/g, ' ');

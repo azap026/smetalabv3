@@ -161,26 +161,24 @@ export async function exportMaterials(): Promise<{ success: boolean; data?: Reco
     if (!team) return { success: false };
 
     try {
-        const data = await db
+        const dbData = await db
             .select({
-                code: materials.code,
-                name: materials.name,
-                unit: materials.unit,
-                price: materials.price,
-                vendor: materials.vendor,
-                weight: materials.weight,
-                categoryLv1: materials.categoryLv1,
-                categoryLv2: materials.categoryLv2,
-                categoryLv3: materials.categoryLv3,
-                categoryLv4: materials.categoryLv4,
-                productUrl: materials.productUrl,
-                imageUrl: materials.imageUrl,
-                category: materials.category,
-                subcategory: materials.subcategory,
+                'Код': materials.code,
+                'Наименование': materials.name,
+                'Ед изм': materials.unit,
+                'Цена': materials.price,
+                'Поставщик': materials.vendor,
+                'Вес (кг)': materials.weight,
+                'Категория LV1': materials.categoryLv1,
+                'Категория LV2': materials.categoryLv2,
+                'Категория LV3': materials.categoryLv3,
+                'Категория LV4': materials.categoryLv4,
+                'URL товара': materials.productUrl,
+                'URL изображения': materials.imageUrl,
             })
             .from(materials)
             .where(and(eq(materials.tenantId, team.id), eq(materials.status, 'active'), isNull(materials.deletedAt)));
-        return { success: true, data };
+        return { success: true, data: dbData as unknown as Record<string, unknown>[] };
     } catch {
         return { success: false };
     }

@@ -54,23 +54,32 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
     const team = await getTeamForUser();
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
-    const file = formData.get('file') as File;
-    if (!file) {
-        return { success: false, message: 'Файл не найден.' };
+    console.log('--- Import Materials Started ---');
+    console.log('FormData Keys:', Array.from(formData.keys()));
+    const file = formData.get('file');
+    console.log('File field value type:', typeof file);
+
+    if (!file || !(file instanceof File)) {
+        console.error('File missing or not a File object!');
+        return { success: false, message: 'Файл не найден или имеет неверный формат.' };
     }
     try {
         const buffer = await file.arrayBuffer();
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const data: Record<string, string | number>[] = xlsx.utils.sheet_to_json(sheet);
 
-        if (data.length === 0) return { success: false, message: 'Файл пуст.' };
+        // Try to detect if it's a tab-separated file and help xlsx
+        const data: Record<string, string | number>[] = xlsx.utils.sheet_to_json(sheet, {
+            defval: '',
+        });
+
+        if (data.length === 0) return { success: false, message: 'Файл пуст или формат не распознан.' };
 
         const mappedData = data.map(row => {
             const newRow: Record<string, string | number | undefined> = {};
             Object.entries(row).forEach(([key, value]) => {
-                const cleanedKey = key.trim();
+                const cleanedKey = key.trim().replace(/\s+/g, ' ');
                 const mappedKey = headerMap[cleanedKey];
                 if (mappedKey) newRow[mappedKey] = value;
             });
@@ -83,13 +92,14 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
             if (missingFields.length > 0) {
                 return {
                     success: false,
-                    message: `Отсутствуют необходимые столбцы: ${missingFields.join(', ')}`,
+                    message: `Отсутствуют необходимые столбцы: ${missingFields.join(', ')}. Проверьте соответствие шапке.`,
                 };
             }
         }
 
         const uniqueMaterialsMap = new Map<string, NewMaterial>();
         mappedData.forEach(row => {
+            if (!row.code || !row.name) return;
             const code = String(row.code);
             const material: NewMaterial = {
                 tenantId: team.id,
@@ -116,44 +126,46 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
 
         const newMaterials = Array.from(uniqueMaterialsMap.values());
 
-        const BATCH_SIZE = 20;
-        for (let i = 0; i < newMaterials.length; i += BATCH_SIZE) {
-            const batch = newMaterials.slice(i, i + BATCH_SIZE);
-            await Promise.all(batch.map(async (m) => {
-                const textToEmbed = `Материал: ${m.name}. Код: ${m.code}. Поставщик: ${m.vendor || '—'}. Категории: ${[m.categoryLv1, m.categoryLv2, m.categoryLv3, m.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${m.unit || '—'}.`;
-                m.embedding = await generateEmbedding(textToEmbed);
-            }));
+        // IMPORTANT: Skip embeddings for bulk import to avoid timeouts (30s limit)
+        // They should be generated in a background job later.
+
+        const DB_BATCH_SIZE = 500;
+        for (let i = 0; i < newMaterials.length; i += DB_BATCH_SIZE) {
+            const batch = newMaterials.slice(i, i + DB_BATCH_SIZE);
+            await db.insert(materials).values(batch)
+                .onConflictDoUpdate({
+                    target: [materials.tenantId, materials.code],
+                    set: {
+                        name: sql`excluded.name`,
+                        unit: sql`excluded.unit`,
+                        price: sql`excluded.price`,
+                        vendor: sql`excluded.vendor`,
+                        weight: sql`excluded.weight`,
+                        categoryLv1: sql`excluded.category_lv1`,
+                        categoryLv2: sql`excluded.category_lv2`,
+                        categoryLv3: sql`excluded.category_lv3`,
+                        categoryLv4: sql`excluded.category_lv4`,
+                        productUrl: sql`excluded.product_url`,
+                        imageUrl: sql`excluded.image_url`,
+                        category: sql`excluded.category`,
+                        subcategory: sql`excluded.subcategory`,
+                        shortDescription: sql`excluded.short_description`,
+                        description: sql`excluded.description`,
+                        // embedding: sql`excluded.embedding`, // Keep old embedding if exists
+                        updatedAt: new Date(),
+                    }
+                });
         }
 
-        await db.insert(materials).values(newMaterials)
-            .onConflictDoUpdate({
-                target: [materials.tenantId, materials.code],
-                set: {
-                    name: sql`excluded.name`,
-                    unit: sql`excluded.unit`,
-                    price: sql`excluded.price`,
-                    vendor: sql`excluded.vendor`,
-                    weight: sql`excluded.weight`,
-                    categoryLv1: sql`excluded.category_lv1`,
-                    categoryLv2: sql`excluded.category_lv2`,
-                    categoryLv3: sql`excluded.category_lv3`,
-                    categoryLv4: sql`excluded.category_lv4`,
-                    productUrl: sql`excluded.product_url`,
-                    imageUrl: sql`excluded.image_url`,
-                    category: sql`excluded.category`,
-                    subcategory: sql`excluded.subcategory`,
-                    shortDescription: sql`excluded.short_description`,
-                    description: sql`excluded.description`,
-                    embedding: sql`excluded.embedding`,
-                    updatedAt: new Date(),
-                }
-            });
-
         revalidatePath('/app/guide/materials');
-        return { success: true, message: `Импорт завершен. Записей: ${newMaterials.length}`, count: newMaterials.length };
+        return {
+            success: true,
+            message: `Импорт завершен. Загружено записей: ${newMaterials.length}. Интеллектуальный поиск станет доступен после обработки данных ИИ.`,
+            count: newMaterials.length
+        };
     } catch (error) {
         console.error('Import materials error:', error);
-        return { success: false, message: 'Ошибка при импорте.' };
+        return { success: false, message: 'Ошибка при обработке файла.' };
     }
 }
 

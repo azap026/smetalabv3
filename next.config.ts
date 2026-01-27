@@ -6,8 +6,9 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '100mb',
+      bodySizeLimit: '200mb',
     },
+    middlewareClientMaxBodySize: '200mb',
     /* ppr: true,
     clientSegmentCache: true */
   }

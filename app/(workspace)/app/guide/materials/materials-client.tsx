@@ -80,6 +80,7 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            console.log(`Sending file: ${file.name}, size: ${file.size} bytes`);
             const formData = new FormData();
             formData.append('file', file);
             startImportTransition(async () => {

@@ -41,6 +41,7 @@ describe('Works Reordering Performance', () => {
 
         // Mock return values
         vi.mocked(getUser).mockResolvedValue(insertedUser);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         vi.mocked(getTeamForUser).mockResolvedValue(insertedTeam as any);
     });
 

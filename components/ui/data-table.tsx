@@ -41,6 +41,41 @@ interface DataTableProps<TData, TValue> {
     onAiSearch?: (query: string) => void
 }
 
+// --- Stable Virtuoso Components ---
+const VirtuosoTableComponents: any = {
+    Table: ({ children, style, context, ...props }: any) => (
+        <table
+            {...props}
+            style={{
+                ...style,
+                width: '100%',
+                tableLayout: 'fixed',
+                borderCollapse: 'separate',
+                borderSpacing: 0
+            }}
+        >
+            <colgroup>
+                {context?.flatHeaders?.map((header: any) => (
+                    <col
+                        key={header.id}
+                        style={{ width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : 'auto' }}
+                    />
+                ))}
+            </colgroup>
+            {children}
+        </table>
+    ),
+    TableHead: React.forwardRef<HTMLTableSectionElement, any>((props, ref) => (
+        <thead {...props} ref={ref} className="z-40" />
+    )),
+    TableRow: (props: any) => (
+        <tr {...props} className="border-b last:border-0 hover:bg-muted/30 transition-colors group group/row" />
+    ),
+    TableBody: React.forwardRef<HTMLTableSectionElement, any>((props, ref) => (
+        <tbody {...props} ref={ref} />
+    )),
+};
+
 export function DataTable<TData, TValue>({
     columns,
     data,
@@ -59,8 +94,14 @@ export function DataTable<TData, TValue>({
     const [isAiMode, setIsAiMode] = React.useState(false)
 
     // Local state for input to allow "AI Mode" to ignore table filters while keeping text
-    const initialFilterValue = filterColumn ? "" : "";
-    const [searchValue, setSearchValue] = React.useState(initialFilterValue)
+    const [searchValue, setSearchValue] = React.useState("")
+
+    const tableState = React.useMemo(() => ({
+        sorting,
+        columnFilters: isAiMode ? [] : columnFilters,
+        columnVisibility,
+        rowSelection,
+    }), [sorting, columnFilters, isAiMode, columnVisibility, rowSelection]);
 
     const table = useReactTable({
         data,
@@ -74,61 +115,19 @@ export function DataTable<TData, TValue>({
         onRowSelectionChange: setRowSelection,
         getRowId: (row) => (row as { id: string }).id,
         meta,
-        state: {
-            sorting,
-            // If we are in AI mode, we explicitly pass no filters to the engine 
-            // so it shows all server-returned results
-            columnFilters: isAiMode ? [] : columnFilters,
-            columnVisibility,
-            rowSelection,
-        },
+        state: tableState,
     })
 
-    // Sync local input value with table filter when entering normal mode
-    // or when filters are changed from outside
+    // Sync input with table filter
     React.useEffect(() => {
         if (!isAiMode && filterColumn) {
-            const currentFilter = (table.getColumn(filterColumn)?.getFilterValue() as string) ?? "";
-            setSearchValue(currentFilter);
+            const val = (table.getColumn(filterColumn)?.getFilterValue() as string) ?? "";
+            setSearchValue(val);
         }
     }, [columnFilters, isAiMode, filterColumn, table]);
 
     const { rows } = table.getRowModel()
-
-    // Components mapping for Virtuoso
-    const TableComponents = React.useMemo(() => ({
-        Table: ({ children, style, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
-            <table
-                {...props}
-                style={{
-                    ...style,
-                    width: '100%',
-                    tableLayout: 'fixed',
-                    borderCollapse: 'separate',
-                    borderSpacing: 0
-                }}
-            >
-                <colgroup>
-                    {table.getFlatHeaders().map((header) => (
-                        <col
-                            key={header.id}
-                            style={{ width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : 'auto' }}
-                        />
-                    ))}
-                </colgroup>
-                {children}
-            </table>
-        ),
-        TableHead: React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
-            <thead {...props} ref={ref} className="z-40" />
-        )),
-        TableRow: (props: React.HTMLAttributes<HTMLTableRowElement>) => (
-            <tr {...props} className="border-b last:border-0 hover:bg-muted/30 transition-colors group group/row" />
-        ),
-        TableBody: React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
-            <tbody {...props} ref={ref} />
-        )),
-    }), [table])
+    const flatHeaders = table.getFlatHeaders();
 
     const handleSearchClick = () => {
         if (searchValue && showAiSearch && onAiSearch) {
@@ -196,7 +195,8 @@ export function DataTable<TData, TValue>({
                 <TableVirtuoso
                     style={{ height }}
                     data={rows}
-                    components={TableComponents}
+                    context={{ flatHeaders }}
+                    components={VirtuosoTableComponents}
                     fixedHeaderContent={() => (
                         <>
                             {table.getHeaderGroups().map((headerGroup) => (

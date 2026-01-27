@@ -536,14 +536,14 @@ export async function searchWorks(query: string): Promise<{ success: boolean; da
     }
 
     try {
+        console.time(`searchWorks:${query}`);
         const queryEmbedding = await generateEmbedding(query);
         if (!queryEmbedding) {
             return { success: false, message: 'Не удалось сгенерировать вектор запроса.' };
         }
+        console.log(`Generated embedding for: ${query}`);
 
         // Vector search using cosine distance (<=>)
-        // We select works for this tenant, not deleted
-        // Order by distance ascending
         const results = await db.select({
             id: works.id,
             tenantId: works.tenantId,
@@ -572,6 +572,9 @@ export async function searchWorks(query: string): Promise<{ success: boolean; da
             )
             .orderBy(sql`${works.embedding} <=> ${JSON.stringify(queryEmbedding)}`)
             .limit(20);
+
+        console.timeEnd(`searchWorks:${query}`);
+        console.log(`Found ${results.length} results`);
 
         return { success: true, data: results };
 

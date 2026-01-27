@@ -255,11 +255,11 @@ export function WorksClient({ initialData }: WorksClientProps) {
         });
 
         startAiSearchTransition(async () => {
+            console.log(`Starting client-side search for: ${query}`);
             const result = await searchWorks(query);
+            console.log(`Search result for ${query}:`, result.success, result.data?.length);
+
             if (result.success && result.data) {
-                // Cast the result to WorkRow[] because of the similarity field overlap/mismatch handling
-                // Ideally we should keep similarity info, but WorkRow doesn't have it.
-                // We can extend WorkRow or just ignore it for now.
                 setData(result.data as WorkRow[]);
                 toast({
                     title: "Найдено",

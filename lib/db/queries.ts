@@ -189,43 +189,34 @@ export async function getMaterials() {
   const team = await getTeamForUser();
   const teamId = team?.id;
 
-  return unstable_cache(
-    async () => {
-      return await db
-        .select({
-          id: materials.id,
-          tenantId: materials.tenantId,
-          code: materials.code,
-          name: materials.name,
-          unit: materials.unit,
-          price: materials.price,
-          category: materials.category,
-          subcategory: materials.subcategory,
-          shortDescription: materials.shortDescription,
-          description: materials.description,
-          status: materials.status,
-          metadata: materials.metadata,
-          tags: materials.tags,
-          createdAt: materials.createdAt,
-          updatedAt: materials.updatedAt,
-          deletedAt: materials.deletedAt,
-        })
-        .from(materials)
-        .where(
-          and(
-            isNull(materials.deletedAt),
-            teamId
-              ? or(isNull(materials.tenantId), eq(materials.tenantId, teamId))
-              : isNull(materials.tenantId)
-          )
-        )
-        .orderBy(materials.code) as unknown as MaterialRow[];
-    },
-    [`materials-team-${teamId || 'public'}`],
-    {
-      tags: ['materials', teamId ? `materials-team-${teamId}` : 'materials-public'],
-      revalidate: 3600,
-    }
-  )();
+  return await db
+    .select({
+      id: materials.id,
+      tenantId: materials.tenantId,
+      code: materials.code,
+      name: materials.name,
+      unit: materials.unit,
+      price: materials.price,
+      category: materials.category,
+      subcategory: materials.subcategory,
+      shortDescription: materials.shortDescription,
+      description: materials.description,
+      status: materials.status,
+      metadata: materials.metadata,
+      tags: materials.tags,
+      createdAt: materials.createdAt,
+      updatedAt: materials.updatedAt,
+      deletedAt: materials.deletedAt,
+    })
+    .from(materials)
+    .where(
+      and(
+        isNull(materials.deletedAt),
+        teamId
+          ? or(isNull(materials.tenantId), eq(materials.tenantId, teamId))
+          : isNull(materials.tenantId)
+      )
+    )
+    .orderBy(materials.code) as unknown as MaterialRow[];
 }
 

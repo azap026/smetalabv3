@@ -47,24 +47,22 @@ const headerMap: Record<string, string> = {
 
 const requiredFields = ['code', 'name', 'unit', 'price'];
 
-export async function importMaterials(formData: FormData): Promise<{ success: boolean; message: string; count?: number }> {
+export async function importMaterials(base64Content: string, fileName: string): Promise<{ success: boolean; message: string; count?: number }> {
     const user = await getUser();
     if (!user) return { success: false, message: 'Пользователь не найден.' };
 
     const team = await getTeamForUser();
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
-    console.log('--- Import Materials Started ---');
-    console.log('FormData Keys:', Array.from(formData.keys()));
-    const file = formData.get('file');
-    console.log('File field value type:', typeof file);
+    console.log(`--- Import Materials Started (Base64) ---`);
+    console.log(`File: ${fileName}, Content Length: ${base64Content.length}`);
 
-    if (!file || !(file instanceof File)) {
-        console.error('File missing or not a File object!');
-        return { success: false, message: 'Файл не найден или имеет неверный формат.' };
+    if (!base64Content) {
+        return { success: false, message: 'Получен пустой файл.' };
     }
+
     try {
-        const buffer = await file.arrayBuffer();
+        const buffer = Buffer.from(base64Content, 'base64');
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];

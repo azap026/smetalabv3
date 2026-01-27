@@ -12,11 +12,12 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, ChevronUp, ChevronsUpDown, Search } from "lucide-react"
+import { ChevronDown, ChevronUp, ChevronsUpDown, Search, Sparkles, Loader2 } from "lucide-react"
 import { TableVirtuoso } from "react-virtuoso"
 
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 /* -------------------------------------------------------------------------- */
 /*                               DataTable                                    */
@@ -36,6 +37,8 @@ interface DataTableProps<TData, TValue> {
     filterColumn?: string
     filterPlaceholder?: string
     meta?: TableMeta<TData>
+    showAiSearch?: boolean
+    onAiSearch?: (query: string) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -45,14 +48,19 @@ export function DataTable<TData, TValue>({
     filterColumn,
     filterPlaceholder = "Поиск...",
     meta,
-}: DataTableProps<TData, TValue>) {
+    showAiSearch,
+    onAiSearch,
+    isSearching
+}: DataTableProps<TData, TValue> & { isSearching?: boolean }) {
     const [sorting, setSorting] = React.useState<SortingState>([])
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-        []
-    )
-    const [columnVisibility, setColumnVisibility] =
-        React.useState<VisibilityState>({})
+    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = React.useState({})
+    const [isAiMode, setIsAiMode] = React.useState(false)
+
+    // Local state for input to allow "AI Mode" to ignore table filters while keeping text
+    const initialFilterValue = filterColumn ? "" : "";
+    const [searchValue, setSearchValue] = React.useState(initialFilterValue)
 
     const table = useReactTable({
         data,
@@ -68,15 +76,26 @@ export function DataTable<TData, TValue>({
         meta,
         state: {
             sorting,
-            columnFilters,
+            // If we are in AI mode, we explicitly pass no filters to the engine 
+            // so it shows all server-returned results
+            columnFilters: isAiMode ? [] : columnFilters,
             columnVisibility,
             rowSelection,
         },
     })
 
+    // Sync local input value with table filter when entering normal mode
+    // or when filters are changed from outside
+    React.useEffect(() => {
+        if (!isAiMode && filterColumn) {
+            const currentFilter = (table.getColumn(filterColumn)?.getFilterValue() as string) ?? "";
+            setSearchValue(currentFilter);
+        }
+    }, [columnFilters, isAiMode, filterColumn, table]);
+
     const { rows } = table.getRowModel()
 
-    // Components mapping for Virtuoso to maintain table structure and alignment
+    // Components mapping for Virtuoso
     const TableComponents = React.useMemo(() => ({
         Table: ({ children, style, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
             <table
@@ -111,20 +130,64 @@ export function DataTable<TData, TValue>({
         )),
     }), [table])
 
+    const handleSearchClick = () => {
+        if (searchValue && showAiSearch && onAiSearch) {
+            setIsAiMode(true)
+            onAiSearch(searchValue)
+        }
+    }
+
     return (
         <div className="space-y-4">
             {/* Search Filter */}
             {filterColumn && (
-                <div className="relative flex items-center px-1 md:px-0">
-                    <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder={filterPlaceholder}
-                        value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ""}
-                        onChange={(event) =>
-                            table.getColumn(filterColumn)?.setFilterValue(event.target.value)
-                        }
-                        className="max-w-sm pl-9"
-                    />
+                <div className="relative flex items-center px-1 md:px-0 gap-2">
+                    <div className="relative flex-1 max-w-sm">
+                        {isSearching ? (
+                            <Loader2 className="absolute left-3 h-4 w-4 top-1/2 -translate-y-1/2 text-indigo-500 animate-spin" />
+                        ) : (
+                            <Search className="absolute left-3 h-4 w-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        )}
+                        <Input
+                            placeholder={filterPlaceholder}
+                            value={searchValue}
+                            onChange={(event) => {
+                                const val = event.target.value
+                                setSearchValue(val)
+                                setIsAiMode(false)
+                                table.getColumn(filterColumn)?.setFilterValue(val)
+                            }}
+                            className={cn(
+                                "pl-9 transition-all duration-200",
+                                isAiMode && "border-indigo-400 ring-indigo-400 focus-visible:ring-indigo-400"
+                            )}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleSearchClick()
+                                }
+                            }}
+                        />
+                        {isAiMode && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold animate-pulse">
+                                AI MODE
+                            </div>
+                        )}
+                    </div>
+                    {showAiSearch && onAiSearch && (
+                        <Button
+                            variant={isAiMode ? "default" : "outline"}
+                            size="icon"
+                            disabled={isSearching}
+                            onClick={handleSearchClick}
+                            title="Умный поиск (AI)"
+                            className={cn(
+                                "shrink-0 transition-all duration-300",
+                                isAiMode ? "bg-indigo-600 hover:bg-indigo-700 border-indigo-700 shadow-indigo-100 shadow-lg" : "border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50"
+                            )}
+                        >
+                            {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className={cn("h-4 w-4", isAiMode ? "text-white" : "text-indigo-500")} />}
+                        </Button>
+                    )}
                 </div>
             )}
 
@@ -155,7 +218,7 @@ export function DataTable<TData, TValue>({
                                                         )}
                                                         onClick={header.column.getToggleSortingHandler()}
                                                     >
-                                                        <div className="truncate flex-1">
+                                                        <div className="truncate flex-1 text-xs md:text-sm">
                                                             {flexRender(
                                                                 header.column.columnDef.header,
                                                                 header.getContext()

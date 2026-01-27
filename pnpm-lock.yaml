@@ -89,6 +89,9 @@ importers:
       next-swagger-doc:
         specifier: ^0.4.1
         version: 0.4.1(next@15.6.0-canary.59(@babel/core@7.28.6)(@playwright/test@1.58.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(openapi-types@12.1.3)
+      openai:
+        specifier: ^6.16.0
+        version: 6.16.0(ws@8.19.0)(zod@3.24.4)
       postcss:
         specifier: ^8.5.3
         version: 8.5.3
@@ -4211,6 +4214,18 @@ packages:
 
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
+
+  openai@6.16.0:
+    resolution: {integrity: sha512-fZ1uBqjFUjXzbGc35fFtYKEOxd20kd9fDpFeqWtsOZWiubY8CZ1NAlXHW3iathaFvqmNtCWMIsosCuyeI7Joxg==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   openapi-path-templating@2.2.1:
     resolution: {integrity: sha512-eN14VrDvl/YyGxxrkGOHkVkWEoPyhyeydOUrbvjoz8K5eIGgELASwN1eqFOJ2CTQMGCy2EntOK1KdtJ8ZMekcg==}
@@ -9444,6 +9459,11 @@ snapshots:
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
+
+  openai@6.16.0(ws@8.19.0)(zod@3.24.4):
+    optionalDependencies:
+      ws: 8.19.0
+      zod: 3.24.4
 
   openapi-path-templating@2.2.1:
     dependencies:

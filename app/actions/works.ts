@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
 import { works, NewWork } from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { generateEmbedding } from '@/lib/ai/embeddings';
 
 const headerMap: Record<string, string> = {
     'Код': 'code',
@@ -116,6 +117,22 @@ export async function importWorks(formData: FormData): Promise<{ success: boolea
         const newWorks = Array.from(uniqueWorksMap.values());
         console.log('First Work to Insert:', newWorks[0]);
 
+        // Generate embeddings for all works (in serial batches to avoid rate limits)
+        // OpenAI rate limits are usually high enough for small batches, but we play safe.
+        const BATCH_SIZE = 20; // Adjust as needed
+        for (let i = 0; i < newWorks.length; i += BATCH_SIZE) {
+            const batch = newWorks.slice(i, i + BATCH_SIZE);
+            await Promise.all(batch.map(async (work) => {
+                const textToEmbed = [
+                    work.name,
+                    work.category,
+                    work.subcategory,
+                    work.unit
+                ].filter(Boolean).join(' ');
+                work.embedding = await generateEmbedding(textToEmbed);
+            }));
+        }
+
         // Bulk Upsert in a single query (Postgres supports this via Drizzle)
         await db.insert(works).values(newWorks)
             .onConflictDoUpdate({
@@ -129,6 +146,7 @@ export async function importWorks(formData: FormData): Promise<{ success: boolea
                     subcategory: sql`excluded.subcategory`,
                     shortDescription: sql`excluded.short_description`,
                     description: sql`excluded.description`,
+                    embedding: sql`excluded.embedding`,
                     updatedAt: new Date(),
                 }
             });
@@ -263,9 +281,32 @@ export async function updateWork(id: string, data: Partial<NewWork>): Promise<{ 
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
     try {
+        let embedding: number[] | null | undefined = undefined;
+
+        // If relevant fields are changing, regenerate embedding
+        // We might need to fetch existing data if only partial update
+        if (data.name || data.category || data.subcategory || data.unit) {
+            // Fetch current work data to combine with updates
+            const currentWork = await db.query.works.findFirst({
+                where: and(eq(works.id, id), eq(works.tenantId, team.id))
+            });
+
+            if (currentWork) {
+                const textToEmbed = [
+                    data.name ?? currentWork.name,
+                    data.category ?? currentWork.category,
+                    data.subcategory ?? currentWork.subcategory,
+                    data.unit ?? currentWork.unit
+                ].filter(Boolean).join(' ');
+
+                embedding = await generateEmbedding(textToEmbed);
+            }
+        }
+
         await db.update(works)
             .set({
                 ...data,
+                ...(embedding !== undefined && { embedding }),
                 updatedAt: new Date()
             })
             .where(
@@ -291,10 +332,14 @@ export async function createWork(data: NewWork): Promise<{ success: boolean; mes
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
     try {
+        const textToEmbed = [data.name, data.category, data.subcategory, data.unit].filter(Boolean).join(' ');
+        const embedding = await generateEmbedding(textToEmbed);
+
         await db.insert(works).values({
             ...data,
             tenantId: team.id,
             status: 'active',
+            embedding
         });
 
         revalidatePath('/app/guide/works');
@@ -446,12 +491,17 @@ export async function insertWorkAfter(afterId: string | null, data: NewWork): Pr
             }
         }
 
+        // Generate embedding
+        const textToEmbed = [data.name, data.category, data.subcategory, data.unit].filter(Boolean).join(' ');
+        const embedding = await generateEmbedding(textToEmbed);
+
         await db.insert(works).values({
             ...data,
             tenantId: team.id,
             code: tempCode,
             phase: targetPhase,
             status: 'active',
+            embedding
         });
 
         // 3. Immediately resequence ONLY the affected phase to fix codes
@@ -465,6 +515,69 @@ export async function insertWorkAfter(afterId: string | null, data: NewWork): Pr
     } catch (error) {
         console.error('Insert work error:', error);
         return { success: false, message: 'Ошибка при вставке записи.' };
+    }
+}
+
+// ----------------------------------------------------------------------
+// AI Search Action
+// ----------------------------------------------------------------------
+
+import { Work } from '@/lib/db/schema';
+
+export async function searchWorks(query: string): Promise<{ success: boolean; data?: (Partial<Work> & { similarity: unknown })[]; message?: string }> {
+    const user = await getUser();
+    if (!user) return { success: false, message: 'Пользователь не найден.' };
+
+    const team = await getTeamForUser();
+    if (!team) return { success: false, message: 'Команда не найдена.' };
+
+    if (!query || query.trim().length < 2) {
+        return { success: false, message: 'Слишком короткий запрос.' };
+    }
+
+    try {
+        const queryEmbedding = await generateEmbedding(query);
+        if (!queryEmbedding) {
+            return { success: false, message: 'Не удалось сгенерировать вектор запроса.' };
+        }
+
+        // Vector search using cosine distance (<=>)
+        // We select works for this tenant, not deleted
+        // Order by distance ascending
+        const results = await db.select({
+            id: works.id,
+            tenantId: works.tenantId,
+            code: works.code,
+            name: works.name,
+            unit: works.unit,
+            price: works.price,
+            phase: works.phase,
+            category: works.category,
+            subcategory: works.subcategory,
+            shortDescription: works.shortDescription,
+            description: works.description,
+            status: works.status,
+            createdAt: works.createdAt,
+            updatedAt: works.updatedAt,
+            deletedAt: works.deletedAt,
+            similarity: sql<number>`1 - (${works.embedding} <=> ${JSON.stringify(queryEmbedding)})`
+        })
+            .from(works)
+            .where(
+                and(
+                    eq(works.tenantId, team.id),
+                    isNull(works.deletedAt),
+                    eq(works.status, 'active')
+                )
+            )
+            .orderBy(sql`${works.embedding} <=> ${JSON.stringify(queryEmbedding)}`)
+            .limit(20);
+
+        return { success: true, data: results };
+
+    } catch (error) {
+        console.error('Vector search error:', error);
+        return { success: false, message: 'Ошибка поиска.' };
     }
 }
 

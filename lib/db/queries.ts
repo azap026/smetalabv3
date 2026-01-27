@@ -4,6 +4,7 @@ import { activityLogs, teamMembers, teams, users, works } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 import { cache } from 'react';
+import { WorkRow } from '@/types/work-row';
 
 export const getUser = cache(async () => {
   const sessionCookie = (await cookies()).get('session');
@@ -142,7 +143,25 @@ export async function getWorks() {
   const teamId = team?.id;
 
   return await db
-    .select()
+    .select({
+      id: works.id,
+      tenantId: works.tenantId,
+      code: works.code,
+      name: works.name,
+      unit: works.unit,
+      price: works.price,
+      phase: works.phase,
+      category: works.category,
+      subcategory: works.subcategory,
+      shortDescription: works.shortDescription,
+      description: works.description,
+      status: works.status,
+      metadata: works.metadata,
+      tags: works.tags,
+      createdAt: works.createdAt,
+      updatedAt: works.updatedAt,
+      deletedAt: works.deletedAt,
+    })
     .from(works)
     .where(
       and(
@@ -152,5 +171,5 @@ export async function getWorks() {
           : isNull(works.tenantId)
       )
     )
-    .orderBy(sql`string_to_array(${works.code}, '.')::bigint[]`);
+    .orderBy(sql`string_to_array(${works.code}, '.')::bigint[]`) as unknown as WorkRow[];
 }

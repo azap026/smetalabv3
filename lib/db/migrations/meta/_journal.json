@@ -71,6 +71,13 @@
       "when": 1769499921594,
       "tag": "0009_nappy_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769516524772,
+      "tag": "0010_low_solo",
+      "breakpoints": true
     }
   ]
 }

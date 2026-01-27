@@ -18,7 +18,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { getUniqueUnits } from "@/app/(workspace)/app/guide/works/actions"
+import { getUniqueUnits } from "@/app/actions/works"
 
 interface UnitSelectProps {
     value: string

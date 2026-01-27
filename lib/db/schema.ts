@@ -223,6 +223,12 @@ export const vector = customType<{
   dataType(config) {
     return `vector(${config?.dimensions})`;
   },
+  toDriver(value: number[]) {
+    return JSON.stringify(value);
+  },
+  fromDriver(value: unknown) {
+    return JSON.parse(value as string);
+  },
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -248,7 +254,7 @@ export const works = pgTable('works', {
   status: workStatusEnum('status').notNull().default('draft'),
   metadata: jsonb('metadata').default({}),
 
-  // embedding: vector('embedding', { dimensions: 1024 }),
+  embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small uses 1536 dimensions
   // search_vector: customType<{ data: string }>({ dataType() { return 'tsvector'; } })('search_vector'),
 
   deletedAt: timestamp('deleted_at'),

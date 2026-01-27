@@ -14,8 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
-import { Work } from "@/lib/db/schema";
-import { importWorks, exportWorks, deleteAllWorks, insertWorkAfter } from './actions';
+import { importWorks, exportWorks, deleteAllWorks, insertWorkAfter, searchWorks } from '@/app/actions/works';
 import * as xlsx from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -29,13 +28,17 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-export type WorkRow = Work & {
-    isPlaceholder?: boolean;
-};
+import { WorkRow } from '@/types/work-row';
 
 interface WorksClientProps {
-    initialData: Work[];
+    initialData: WorkRow[];
 }
 
 export function WorksClient({ initialData }: WorksClientProps) {
@@ -43,6 +46,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
     const [isExporting, startExportTransition] = useTransition();
     const [isImporting, startImportTransition] = useTransition();
     const [isDeletingAll, startDeleteAllTransition] = useTransition();
+    const [isAiSearching, startAiSearchTransition] = useTransition();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Main data state
@@ -151,6 +155,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
                 description: null,
                 tags: null,
                 metadata: {},
+                embedding: null,
                 isPlaceholder: true
             };
             setData([...data, placeholder]);
@@ -178,6 +183,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
             description: null,
             tags: null,
             metadata: {},
+            embedding: null,
             isPlaceholder: true
         };
 
@@ -236,6 +242,39 @@ export function WorksClient({ initialData }: WorksClientProps) {
         });
     };
 
+
+    const handleAiSearch = async (query: string) => {
+        if (!query || query.length < 2) {
+            setData(initialData);
+            return;
+        }
+
+        toast({
+            title: "ИИ Поиск...",
+            description: "Ищем похожие работы...",
+        });
+
+        startAiSearchTransition(async () => {
+            const result = await searchWorks(query);
+            if (result.success && result.data) {
+                // Cast the result to WorkRow[] because of the similarity field overlap/mismatch handling
+                // Ideally we should keep similarity info, but WorkRow doesn't have it.
+                // We can extend WorkRow or just ignore it for now.
+                setData(result.data as WorkRow[]);
+                toast({
+                    title: "Найдено",
+                    description: `Найдено ${result.data.length} похожих работ.`,
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Ошибка поиска",
+                    description: result.message,
+                });
+            }
+        });
+    };
+
     return (
         <div className="space-y-6">
             <input
@@ -269,46 +308,68 @@ export function WorksClient({ initialData }: WorksClientProps) {
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleImportClick} disabled={isImporting}>
+                                    {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                                    Импорт
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Загрузить данные из файла</p>
+                            </TooltipContent>
+                        </Tooltip>
 
-                    <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleImportClick} disabled={isImporting}>
-                        {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                        Импорт
-                    </Button>
-                    <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleExport} disabled={isExporting}>
-                        {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        Экспорт
-                    </Button>
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button
-                                variant="destructive"
-                                className="flex-1 md:flex-none h-9 text-xs md:text-sm"
-                                disabled={isDeletingAll || initialData.length === 0}
-                            >
-                                {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                                Удалить всё
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Это действие необратимо. Весь справочник работ для вашей команды будет полностью удален.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Отмена</AlertDialogCancel>
-                                <AlertDialogAction
-                                    onClick={handleDeleteAll}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                    Удалить всё
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleExport} disabled={isExporting}>
+                                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                    Экспорт
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Выгрузить данные в файл</p>
+                            </TooltipContent>
+                        </Tooltip>
 
-
+                        <AlertDialog>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="destructive"
+                                            className="flex-1 md:flex-none h-9 text-xs md:text-sm"
+                                            disabled={isDeletingAll || initialData.length === 0}
+                                        >
+                                            {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                            Удалить всё
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Удалить все записи</p>
+                                </TooltipContent>
+                            </Tooltip>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Это действие необратимо. Весь справочник работ для вашей команды будет полностью удален.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={handleDeleteAll}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                        Удалить всё
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </TooltipProvider>
                 </div>
             </div>
 
@@ -332,6 +393,9 @@ export function WorksClient({ initialData }: WorksClientProps) {
                     height="600px"
                     filterColumn="name"
                     filterPlaceholder="Поиск по наименованию..."
+                    showAiSearch={true}
+                    onAiSearch={handleAiSearch}
+                    isSearching={isAiSearching}
                     meta={{
                         onInsertRequest,
                         onCancelInsert,

@@ -30,10 +30,16 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 
-import { deleteWork, updateWork } from "./actions"
+import { deleteWork, updateWork } from "@/app/actions/works"
 import { useToast } from "@/components/ui/use-toast"
-import { WorkRow } from "./works-client"
+import { WorkRow } from "@/types/work-row"
 import { UnitSelect } from "@/components/unit-select"
 import { TableMeta } from "@/components/ui/data-table"
 
@@ -128,166 +134,182 @@ const RowActions = ({ row, table }: { row: { original: WorkRow }, table: Table<W
     }
 
     return (
-        <div className="flex items-center justify-end md:pr-4 gap-0 md:gap-1">
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 opacity-100 md:opacity-50 md:hover:opacity-100 transition-opacity text-primary"
-                onClick={() => meta?.onInsertRequest?.(row.original.id)}
-                title="Вставить строку ниже"
-            >
-                <Plus className="h-4 w-4" />
-            </Button>
-            <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-100 md:opacity-70 md:group-hover:opacity-100 transition-opacity"
-                        disabled={isDeleting || isUpdating}
-                    >
-                        {isDeleting || isUpdating ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Settings className="h-4 w-4" />
-                        )}
-                        <span className="sr-only">Настройки</span>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
-                    <DropdownMenuItem
-                        className="cursor-pointer"
-                        onSelect={(e) => {
-                            e.preventDefault();
-                            setIsEditOpen(true);
-                        }}
-                    >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Изменить
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                        className="text-destructive focus:text-destructive cursor-pointer"
-                        onSelect={(e) => {
-                            e.preventDefault();
-                            setIsDeleteOpen(true);
-                        }}
-                    >
-                        <Trash className="mr-2 h-4 w-4" />
-                        Удалить
-                    </DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
+        <TooltipProvider>
+            <div className="flex items-center justify-end md:pr-4 gap-0 md:gap-1">
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 opacity-100 md:opacity-50 md:hover:opacity-100 transition-opacity text-primary"
+                            onClick={() => meta?.onInsertRequest?.(row.original.id)}
+                        >
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Вставить строку ниже</p>
+                    </TooltipContent>
+                </Tooltip>
 
-            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Изменить работу</DialogTitle>
-                        <DialogDescription>
-                            Внесите изменения в данные работы. Нажмите сохранить, когда закончите.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleUpdate} className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="code" className="text-right">Код</Label>
-                            <Input
-                                id="code"
-                                value={formData.code}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                className="col-span-3 h-8 text-sm"
-                                required
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">Название</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="col-span-3 h-8 text-sm"
-                                required
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="unit" className="text-right">Ед. изм.</Label>
-                            <div className="col-span-3">
-                                <UnitSelect
-                                    value={formData.unit || ""}
-                                    onChange={(val) => setFormData({ ...formData, unit: val })}
+                <DropdownMenu modal={false}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 opacity-100 md:opacity-70 md:group-hover:opacity-100 transition-opacity"
+                                    disabled={isDeleting || isUpdating}
+                                >
+                                    {isDeleting || isUpdating ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Settings className="h-4 w-4" />
+                                    )}
+                                    <span className="sr-only">Настройки</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Управление записью</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem
+                            className="cursor-pointer"
+                            onSelect={(e) => {
+                                e.preventDefault();
+                                setIsEditOpen(true);
+                            }}
+                        >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Изменить
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            className="text-destructive focus:text-destructive cursor-pointer"
+                            onSelect={(e) => {
+                                e.preventDefault();
+                                setIsDeleteOpen(true);
+                            }}
+                        >
+                            <Trash className="mr-2 h-4 w-4" />
+                            Удалить
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Изменить работу</DialogTitle>
+                            <DialogDescription>
+                                Внесите изменения в данные работы. Нажмите сохранить, когда закончите.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleUpdate} className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="code" className="text-right">Код</Label>
+                                <Input
+                                    id="code"
+                                    value={formData.code}
+                                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                    className="col-span-3 h-8 text-sm"
+                                    required
                                 />
                             </div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="price" className="text-right">Цена</Label>
-                            <Input
-                                id="price"
-                                type="number"
-                                value={formData.price}
-                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                className="col-span-3 h-8 text-sm"
-                                required
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="phase" className="text-right">Этап</Label>
-                            <Input
-                                id="phase"
-                                value={formData.phase}
-                                onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
-                                className="col-span-3 h-8 text-sm"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="category" className="text-right">Раздел</Label>
-                            <Input
-                                id="category"
-                                value={formData.category}
-                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                className="col-span-3 h-8 text-sm"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="subcategory" className="text-right">Подраздел</Label>
-                            <Input
-                                id="subcategory"
-                                value={formData.subcategory}
-                                onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
-                                className="col-span-3 h-8 text-sm"
-                            />
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit" disabled={isUpdating} className="h-9 px-8">
-                                {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Сохранить
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="name" className="text-right">Название</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    className="col-span-3 h-8 text-sm"
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="unit" className="text-right">Ед. изм.</Label>
+                                <div className="col-span-3">
+                                    <UnitSelect
+                                        value={formData.unit || ""}
+                                        onChange={(val) => setFormData({ ...formData, unit: val })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="price" className="text-right">Цена</Label>
+                                <Input
+                                    id="price"
+                                    type="number"
+                                    value={formData.price}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                    className="col-span-3 h-8 text-sm"
+                                    required
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="phase" className="text-right">Этап</Label>
+                                <Input
+                                    id="phase"
+                                    value={formData.phase}
+                                    onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
+                                    className="col-span-3 h-8 text-sm"
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="category" className="text-right">Раздел</Label>
+                                <Input
+                                    id="category"
+                                    value={formData.category}
+                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                    className="col-span-3 h-8 text-sm"
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="subcategory" className="text-right">Подраздел</Label>
+                                <Input
+                                    id="subcategory"
+                                    value={formData.subcategory}
+                                    onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                                    className="col-span-3 h-8 text-sm"
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" disabled={isUpdating} className="h-9 px-8">
+                                    {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Сохранить
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
 
-            <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Это действие нельзя будет отменить. Запись "{row.original.name}" будет удалена из базы данных.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Отмена</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={(e) => {
-                                e.preventDefault()
-                                handleDelete()
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            disabled={isDeleting}
-                        >
-                            {isDeleting ? "Удаление..." : "Удалить"}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
+                <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Это действие нельзя будет отменить. Запись "{row.original.name}" будет удалена из базы данных.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Отмена</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    handleDelete()
+                                }}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? "Удаление..." : "Удалить"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        </TooltipProvider>
     )
 }
 
@@ -303,14 +325,23 @@ export const columns: ColumnDef<WorkRow>[] = [
             return (
                 <div className="relative group/cell flex items-center h-full min-h-[40px]">
                     {!isPlaceholder && (
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            className="hidden md:flex absolute -left-10 h-7 w-7 rounded-full bg-lime-500 text-white opacity-0 group-hover/row:opacity-100 transition-opacity z-50 hover:bg-lime-600 shadow-md border-2 border-background"
-                            onClick={() => meta.onInsertRequest?.(row.original.id)}
-                        >
-                            <Plus className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="hidden md:flex absolute -left-10 h-7 w-7 rounded-full bg-lime-500 text-white opacity-0 group-hover/row:opacity-100 transition-opacity z-50 hover:bg-lime-600 shadow-md border-2 border-background"
+                                        onClick={() => meta.onInsertRequest?.(row.original.id)}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right">
+                                    <p>Вставить строку ниже</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     )}
                     <div className="font-medium text-xs md:text-sm">
                         {isPlaceholder ? "..." : row.getValue("code")}

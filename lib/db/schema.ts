@@ -277,6 +277,15 @@ export const materials = pgTable('materials', {
   name: text('name').notNull(),
   unit: varchar('unit', { length: 20 }),
   price: integer('price'),
+  vendor: text('vendor'),
+  weight: text('weight'),
+  categoryLv1: text('category_lv1'),
+  categoryLv2: text('category_lv2'),
+  categoryLv3: text('category_lv3'),
+  categoryLv4: text('category_lv4'),
+  productUrl: text('product_url'),
+  imageUrl: text('image_url'),
+
   shortDescription: text('short_description'),
   description: text('description'),
 

@@ -79,8 +79,14 @@ const MaterialRowActions = ({ row, table }: { row: { original: MaterialRow }, ta
         name: row.original.name || "",
         price: row.original.price?.toString() || "",
         unit: row.original.unit || "",
-        category: row.original.category || "",
-        subcategory: row.original.subcategory || "",
+        vendor: row.original.vendor || "",
+        weight: row.original.weight || "",
+        categoryLv1: row.original.categoryLv1 || "",
+        categoryLv2: row.original.categoryLv2 || "",
+        categoryLv3: row.original.categoryLv3 || "",
+        categoryLv4: row.original.categoryLv4 || "",
+        productUrl: row.original.productUrl || "",
+        imageUrl: row.original.imageUrl || "",
     })
 
     const handleDelete = () => {
@@ -128,7 +134,7 @@ const MaterialRowActions = ({ row, table }: { row: { original: MaterialRow }, ta
                         <Settings className="h-4 w-4" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuContent align="end" className="w-56 overflow-y-auto max-h-[80vh]">
                     <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
                         <Pencil className="mr-2 h-4 w-4" /> Изменить
                     </DropdownMenuItem>
@@ -156,23 +162,59 @@ const MaterialRowActions = ({ row, table }: { row: { original: MaterialRow }, ta
             </AlertDialog>
 
             <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Изменить материал</DialogTitle>
                         <DialogDescription>Отредактируйте данные материала.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-name" className="text-right">Название</Label>
-                            <Input id="edit-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="col-span-3" />
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-code">Код</Label>
+                            <Input id="edit-code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-price" className="text-right">Цена</Label>
-                            <Input id="edit-price" type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="col-span-3" />
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-name">Название</Label>
+                            <Input id="edit-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="edit-unit" className="text-right">Ед.изм.</Label>
-                            <Input id="edit-unit" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} className="col-span-3" />
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-price">Цена</Label>
+                            <Input id="edit-price" type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-unit">Ед.изм.</Label>
+                            <Input id="edit-unit" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-vendor">Поставщик</Label>
+                            <Input id="edit-vendor" value={formData.vendor} onChange={(e) => setFormData({ ...formData, vendor: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-weight">Вес (кг)</Label>
+                            <Input id="edit-weight" value={formData.weight} onChange={(e) => setFormData({ ...formData, weight: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-cat1">Категория LV1</Label>
+                            <Input id="edit-cat1" value={formData.categoryLv1} onChange={(e) => setFormData({ ...formData, categoryLv1: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-cat2">Категория LV2</Label>
+                            <Input id="edit-cat2" value={formData.categoryLv2} onChange={(e) => setFormData({ ...formData, categoryLv2: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-cat3">Категория LV3</Label>
+                            <Input id="edit-cat3" value={formData.categoryLv3} onChange={(e) => setFormData({ ...formData, categoryLv3: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-cat4">Категория LV4</Label>
+                            <Input id="edit-cat4" value={formData.categoryLv4} onChange={(e) => setFormData({ ...formData, categoryLv4: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-purl">URL товара</Label>
+                            <Input id="edit-purl" value={formData.productUrl} onChange={(e) => setFormData({ ...formData, productUrl: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-iurl">URL изображения</Label>
+                            <Input id="edit-iurl" value={formData.imageUrl} onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })} />
                         </div>
                     </div>
                     <DialogFooter>
@@ -202,7 +244,7 @@ export const columns: ColumnDef<MaterialRow>[] = [
     {
         accessorKey: "name",
         header: "Наименование",
-        size: 500,
+        size: 300,
         cell: ({ row, table }) => {
             const isPlaceholder = row.original.isPlaceholder
             const meta = table.options.meta as TableMeta<MaterialRow>
@@ -211,12 +253,38 @@ export const columns: ColumnDef<MaterialRow>[] = [
             }
             return (
                 <div className="flex flex-col gap-0.5 py-1">
-                    <span className="text-xs md:text-sm font-semibold">{row.getValue("name")}</span>
-                    {(row.original.category || row.original.subcategory) && (
-                        <div className="flex gap-1 items-center text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
-                            {row.original.category} {row.original.subcategory && ` / ${row.original.subcategory}`}
-                        </div>
+                    <span className="text-xs md:text-sm font-semibold truncate max-w-[280px]" title={row.getValue("name")}>
+                        {row.getValue("name")}
+                    </span>
+                    {row.original.vendor && (
+                        <span className="text-[10px] text-muted-foreground/70 font-medium truncate uppercase tracking-tight">
+                            {row.original.vendor}
+                        </span>
                     )}
+                </div>
+            )
+        }
+    },
+    {
+        id: "photo",
+        header: "Фото",
+        size: 80,
+        cell: ({ row, table }) => {
+            const isPlaceholder = row.original.isPlaceholder
+            const meta = table.options.meta as TableMeta<MaterialRow>
+            if (isPlaceholder) {
+                return <Input className="h-8 text-xs border-primary/20" placeholder="URL..." value={row.original.imageUrl || ""} onChange={(e) => meta.updatePlaceholderRow?.(row.original.id, { imageUrl: e.target.value })} />
+            }
+            const imageUrl = row.original.imageUrl
+            if (!imageUrl) return <div className="w-10 h-10 bg-muted/30 rounded flex items-center justify-center text-[10px] text-muted-foreground/50">N/A</div>
+            return (
+                <div className="w-10 h-10 relative group-hover/row:scale-110 transition-transform">
+                    <img
+                        src={imageUrl}
+                        alt=""
+                        className="w-full h-full object-cover rounded shadow-sm border border-border/50"
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
                 </div>
             )
         }
@@ -224,7 +292,7 @@ export const columns: ColumnDef<MaterialRow>[] = [
     {
         accessorKey: "unit",
         header: () => <div className="text-center">Ед.изм.</div>,
-        size: 100,
+        size: 80,
         cell: ({ row, table }) => {
             const isPlaceholder = row.original.isPlaceholder
             const meta = table.options.meta as TableMeta<MaterialRow>
@@ -237,7 +305,7 @@ export const columns: ColumnDef<MaterialRow>[] = [
     {
         accessorKey: "price",
         header: () => <div className="text-center">Цена</div>,
-        size: 130,
+        size: 110,
         cell: ({ row, table }) => {
             const isPlaceholder = row.original.isPlaceholder
             const meta = table.options.meta as TableMeta<MaterialRow>
@@ -250,12 +318,35 @@ export const columns: ColumnDef<MaterialRow>[] = [
         }
     },
     {
+        id: "category",
+        header: "Категория",
+        size: 200,
+        cell: ({ row, table }) => {
+            const isPlaceholder = row.original.isPlaceholder
+            const meta = table.options.meta as TableMeta<MaterialRow>
+            if (isPlaceholder) {
+                return <Input className="h-8 text-xs border-primary/20" placeholder="Кат1..." value={row.original.categoryLv1 || ""} onChange={(e) => meta.updatePlaceholderRow?.(row.original.id, { categoryLv1: e.target.value })} />
+            }
+            const cats = [row.original.categoryLv1, row.original.categoryLv2, row.original.categoryLv3, row.original.categoryLv4].filter(Boolean)
+            return (
+                <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] font-medium text-muted-foreground truncate" title={cats.join(' > ')}>
+                        {cats.join(' / ') || '—'}
+                    </span>
+                    {row.original.weight && (
+                        <span className="text-[10px] text-muted-foreground/60">{row.original.weight} кг</span>
+                    )}
+                </div>
+            )
+        }
+    },
+    {
         id: "actions",
-        size: 100,
+        size: 80,
         header: ({ table }) => {
             const meta = table.options.meta as TableMeta<MaterialRow>
             return (
-                <div className="flex justify-end pr-6">
+                <div className="flex justify-end pr-4">
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-primary/50 hover:text-primary" onClick={() => meta.onInsertRequest?.()}>
                         <Plus className="h-4 w-4" />
                     </Button>

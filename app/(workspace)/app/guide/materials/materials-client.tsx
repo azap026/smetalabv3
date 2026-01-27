@@ -120,6 +120,14 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
             description: null,
             category: data.length > 0 ? data[data.length - 1].category : '',
             subcategory: data.length > 0 ? data[data.length - 1].subcategory : '',
+            vendor: '',
+            weight: '',
+            categoryLv1: '',
+            categoryLv2: '',
+            categoryLv3: '',
+            categoryLv4: '',
+            productUrl: '',
+            imageUrl: '',
             tags: null,
             metadata: {},
             isPlaceholder: true
@@ -156,6 +164,14 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
                 price: Number(row.price),
                 category: row.category,
                 subcategory: row.subcategory,
+                vendor: row.vendor,
+                weight: row.weight,
+                categoryLv1: row.categoryLv1,
+                categoryLv2: row.categoryLv2,
+                categoryLv3: row.categoryLv3,
+                categoryLv4: row.categoryLv4,
+                productUrl: row.productUrl,
+                imageUrl: row.imageUrl,
                 status: 'active'
             });
 

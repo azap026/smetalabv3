@@ -13,10 +13,19 @@ import { MaterialRow } from '@/types/material-row';
 const headerMap: Record<string, string> = {
     'Код': 'code',
     'Наименование': 'name',
+    'Ед изм': 'unit',
     'Ед. изм.': 'unit',
     'Ед.изм.': 'unit',
     'Базовая цена': 'price',
     'Цена': 'price',
+    'Поставщик': 'vendor',
+    'Вес (кг)': 'weight',
+    'Категория LV1': 'categoryLv1',
+    'Категория LV2': 'categoryLv2',
+    'Категория LV3': 'categoryLv3',
+    'Категория LV4': 'categoryLv4',
+    'URL товара': 'productUrl',
+    'URL изображения': 'imageUrl',
     'Раздел': 'category',
     'Подраздел': 'subcategory',
     'Краткое описание': 'shortDescription',
@@ -26,8 +35,14 @@ const headerMap: Record<string, string> = {
     'name': 'name',
     'unit': 'unit',
     'price': 'price',
-    'category': 'category',
-    'subcategory': 'subcategory',
+    'vendor': 'vendor',
+    'weight': 'weight',
+    'categoryLv1': 'categoryLv1',
+    'categoryLv2': 'categoryLv2',
+    'categoryLv3': 'categoryLv3',
+    'categoryLv4': 'categoryLv4',
+    'productUrl': 'productUrl',
+    'imageUrl': 'imageUrl',
 };
 
 const requiredFields = ['code', 'name', 'unit', 'price'];
@@ -81,6 +96,14 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
                 name: String(row.name),
                 unit: row.unit ? String(row.unit) : undefined,
                 price: row.price ? Number(row.price) : undefined,
+                vendor: row.vendor ? String(row.vendor) : undefined,
+                weight: row.weight ? String(row.weight) : undefined,
+                categoryLv1: row.categoryLv1 ? String(row.categoryLv1) : undefined,
+                categoryLv2: row.categoryLv2 ? String(row.categoryLv2) : undefined,
+                categoryLv3: row.categoryLv3 ? String(row.categoryLv3) : undefined,
+                categoryLv4: row.categoryLv4 ? String(row.categoryLv4) : undefined,
+                productUrl: row.productUrl ? String(row.productUrl) : undefined,
+                imageUrl: row.imageUrl ? String(row.imageUrl) : undefined,
                 category: row.category ? String(row.category) : undefined,
                 subcategory: row.subcategory ? String(row.subcategory) : undefined,
                 shortDescription: row.shortDescription ? String(row.shortDescription) : undefined,
@@ -96,7 +119,7 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
         for (let i = 0; i < newMaterials.length; i += BATCH_SIZE) {
             const batch = newMaterials.slice(i, i + BATCH_SIZE);
             await Promise.all(batch.map(async (m) => {
-                const textToEmbed = `Материал: ${m.name}. Раздел: ${m.category || '—'}. Подраздел: ${m.subcategory || '—'}. Ед.изм: ${m.unit || '—'}.`;
+                const textToEmbed = `Материал: ${m.name}. Код: ${m.code}. Поставщик: ${m.vendor || '—'}. Категории: ${[m.categoryLv1, m.categoryLv2, m.categoryLv3, m.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${m.unit || '—'}.`;
                 m.embedding = await generateEmbedding(textToEmbed);
             }));
         }
@@ -108,6 +131,14 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
                     name: sql`excluded.name`,
                     unit: sql`excluded.unit`,
                     price: sql`excluded.price`,
+                    vendor: sql`excluded.vendor`,
+                    weight: sql`excluded.weight`,
+                    categoryLv1: sql`excluded.category_lv1`,
+                    categoryLv2: sql`excluded.category_lv2`,
+                    categoryLv3: sql`excluded.category_lv3`,
+                    categoryLv4: sql`excluded.category_lv4`,
+                    productUrl: sql`excluded.product_url`,
+                    imageUrl: sql`excluded.image_url`,
                     category: sql`excluded.category`,
                     subcategory: sql`excluded.subcategory`,
                     shortDescription: sql`excluded.short_description`,
@@ -136,6 +167,14 @@ export async function exportMaterials(): Promise<{ success: boolean; data?: Reco
                 name: materials.name,
                 unit: materials.unit,
                 price: materials.price,
+                vendor: materials.vendor,
+                weight: materials.weight,
+                categoryLv1: materials.categoryLv1,
+                categoryLv2: materials.categoryLv2,
+                categoryLv3: materials.categoryLv3,
+                categoryLv4: materials.categoryLv4,
+                productUrl: materials.productUrl,
+                imageUrl: materials.imageUrl,
                 category: materials.category,
                 subcategory: materials.subcategory,
             })
@@ -179,12 +218,12 @@ export async function updateMaterial(id: string, data: Partial<NewMaterial>): Pr
 
     try {
         let embedding: number[] | null | undefined = undefined;
-        if (data.name || data.category || data.subcategory || data.unit) {
+        if (data.name || data.category || data.subcategory || data.unit || data.vendor || data.categoryLv1) {
             const current = await db.query.materials.findFirst({
                 where: and(eq(materials.id, id), eq(materials.tenantId, team.id))
             });
             if (current) {
-                const text = `Материал: ${data.name ?? current.name}. Раздел: ${data.category ?? current.category ?? '—'}. Подраздел: ${data.subcategory ?? current.subcategory ?? '—'}. Ед.изм: ${data.unit ?? current.unit ?? '—'}.`;
+                const text = `Материал: ${data.name ?? current.name}. Код: ${data.code ?? current.code}. Поставщик: ${data.vendor ?? current.vendor ?? '—'}. Категории: ${[data.categoryLv1 ?? current.categoryLv1, data.categoryLv2 ?? current.categoryLv2, data.categoryLv3 ?? current.categoryLv3, data.categoryLv4 ?? current.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${data.unit ?? current.unit ?? '—'}.`;
                 embedding = await generateEmbedding(text);
             }
         }
@@ -203,7 +242,7 @@ export async function createMaterial(data: NewMaterial): Promise<{ success: bool
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
     try {
-        const text = `Материал: ${data.name}. Раздел: ${data.category || '—'}. Подраздел: ${data.subcategory || '—'}. Ед.изм: ${data.unit || '—'}.`;
+        const text = `Материал: ${data.name}. Код: ${data.code}. Поставщик: ${data.vendor || '—'}. Категории: ${[data.categoryLv1, data.categoryLv2, data.categoryLv3, data.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${data.unit || '—'}.`;
         const embedding = await generateEmbedding(text);
         await db.insert(materials).values({ ...data, tenantId: team.id, status: 'active', embedding });
         revalidatePath('/app/guide/materials');
@@ -230,6 +269,14 @@ export async function searchMaterials(query: string): Promise<{ success: boolean
             name: materials.name,
             unit: materials.unit,
             price: materials.price,
+            vendor: materials.vendor,
+            weight: materials.weight,
+            categoryLv1: materials.categoryLv1,
+            categoryLv2: materials.categoryLv2,
+            categoryLv3: materials.categoryLv3,
+            categoryLv4: materials.categoryLv4,
+            productUrl: materials.productUrl,
+            imageUrl: materials.imageUrl,
             category: materials.category,
             subcategory: materials.subcategory,
             shortDescription: materials.shortDescription,

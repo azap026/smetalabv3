@@ -47,22 +47,29 @@ const headerMap: Record<string, string> = {
 
 const requiredFields = ['code', 'name', 'unit', 'price'];
 
-export async function importMaterials(base64Content: string, fileName: string): Promise<{ success: boolean; message: string; count?: number }> {
+export async function importMaterials(formData: FormData): Promise<{ success: boolean; message: string; count?: number }> {
     const user = await getUser();
     if (!user) return { success: false, message: 'Пользователь не найден.' };
 
     const team = await getTeamForUser();
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
-    console.log(`--- Import Materials Started (Base64) ---`);
-    console.log(`File: ${fileName}, Content Length: ${base64Content?.length}`);
+    console.log('--- Import Materials Server Action ---');
 
-    if (!base64Content) {
-        return { success: false, message: 'Получен пустой файл.' };
+    const file = formData.get('file');
+    // Debug log to see exactly what we got
+    console.log('Received payload type:', file ? typeof file : 'null');
+    if (file && typeof file === 'object' && 'name' in file) {
+        console.log(`File details: name=${(file as File).name}, size=${(file as File).size}, type=${(file as File).type}`);
+    }
+
+    if (!file || !(file instanceof File)) {
+        console.error('SERVER ERROR: File object is missing in FormData.');
+        return { success: false, message: 'Ошибка передачи файла. Сервер не получил файл.' };
     }
 
     try {
-        const buffer = Buffer.from(base64Content, 'base64');
+        const buffer = await file.arrayBuffer();
         const workbook = xlsx.read(buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];

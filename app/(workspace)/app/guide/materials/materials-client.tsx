@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
-import { importMaterials, exportMaterials, deleteAllMaterials, createMaterial, searchMaterials } from '@/app/actions/materials';
+import { exportMaterials, deleteAllMaterials, createMaterial, searchMaterials } from '@/app/actions/materials';
 import * as xlsx from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -80,28 +80,35 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            console.log(`Reading file: ${file.name}, size: ${file.size} bytes`);
+            console.log(`Sending file: ${file.name}, size: ${file.size} bytes`);
 
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => {
-                const base64 = reader.result as string;
-                // Remove prefix like "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,"
-                const base64Content = base64.split(',')[1];
+            const formData = new FormData();
+            formData.append('file', file);
 
-                console.log('Sending Base64 content to server...');
-                startImportTransition(async () => {
-                    const result = await importMaterials(base64Content, file.name);
-                    if (result.success) {
+            startImportTransition(async () => {
+                try {
+                    const response = await fetch('/api/upload/materials', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
                         toast({ title: "Импорт завершен", description: result.message });
                     } else {
-                        toast({ variant: "destructive", title: "Ошибка импорта", description: result.message });
+                        toast({ variant: "destructive", title: "Ошибка импорта", description: result.message || "Неизвестная ошибка" });
                     }
-                });
-            };
-            reader.onerror = () => {
-                toast({ variant: "destructive", title: "Ошибка чтения файла" });
-            };
+                } catch (error: unknown) {
+                    console.error('Upload error:', error);
+                    const errorMessage = error instanceof Error ? error.message : "Не удалось отправить файл на сервер.";
+                    toast({
+                        variant: "destructive",
+                        title: "Ошибка",
+                        description: errorMessage
+                    });
+                }
+            });
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
     };

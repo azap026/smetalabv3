@@ -45,19 +45,7 @@ const headerMap: Record<string, string> = {
 
 const requiredFields = ['code', 'name', 'unit', 'price'];
 
-function parsePrice(value: unknown): number | undefined {
-    if (value === undefined || value === null) return undefined;
-    if (typeof value === 'number') return value;
-    const str = String(value).trim().replace(',', '.').replace(/\s/g, '');
-    const num = parseFloat(str);
-    return isNaN(num) ? undefined : num;
-}
 
-export const config = {
-    api: {
-        bodyParser: false, // We handle parsing manually if needed, but for App Router formData() this is less relevant, yet good practice for raw streams
-    },
-};
 
 export async function POST(request: NextRequest) {
     try {
@@ -131,7 +119,7 @@ export async function POST(request: NextRequest) {
                 code: code,
                 name: String(row.name),
                 unit: row.unit ? String(row.unit) : undefined,
-                price: row.price ? parsePrice(row.price) : undefined,
+                price: row.price ? Math.round(parseFloat(String(row.price).replace(',', '.').replace(/\s/g, ''))) : undefined,
                 vendor: row.vendor ? String(row.vendor) : undefined,
                 weight: row.weight ? String(row.weight) : undefined,
                 categoryLv1: row.categoryLv1 ? String(row.categoryLv1) : undefined,

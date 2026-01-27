@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRef, useTransition, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Download, Trash2, Loader2 } from 'lucide-react';
+import { Upload, Download, Trash2, Loader2, Plus } from 'lucide-react';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -47,7 +47,12 @@ export function WorksClient({ initialData }: WorksClientProps) {
     const [isImporting, startImportTransition] = useTransition();
     const [isDeletingAll, startDeleteAllTransition] = useTransition();
     const [isAiSearching, startAiSearchTransition] = useTransition();
+    const [mounted, setMounted] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Main data state
     const [data, setData] = useState<WorkRow[]>(initialData);
@@ -308,68 +313,68 @@ export function WorksClient({ initialData }: WorksClientProps) {
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleImportClick} disabled={isImporting}>
-                                    {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                                    Импорт
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Загрузить данные из файла</p>
-                            </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleExport} disabled={isExporting}>
-                                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                    Экспорт
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Выгрузить данные в файл</p>
-                            </TooltipContent>
-                        </Tooltip>
-
-                        <AlertDialog>
+                    {mounted && (
+                        <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <AlertDialogTrigger asChild>
-                                        <Button
-                                            variant="destructive"
-                                            className="flex-1 md:flex-none h-9 text-xs md:text-sm"
-                                            disabled={isDeletingAll || initialData.length === 0}
-                                        >
-                                            {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                                            Удалить всё
-                                        </Button>
-                                    </AlertDialogTrigger>
+                                    <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleImportClick} disabled={isImporting}>
+                                        {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                                        Импорт
+                                    </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Удалить все записи</p>
+                                    <p>Загрузить данные из файла</p>
                                 </TooltipContent>
                             </Tooltip>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Это действие необратимо. Весь справочник работ для вашей команды будет полностью удален.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Отмена</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        onClick={handleDeleteAll}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                        Удалить всё
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </TooltipProvider>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleExport} disabled={isExporting}>
+                                        {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                        Экспорт
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Выгрузить данные в файл</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <AlertDialog>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <AlertDialogTrigger asChild>
+                                            <Button
+                                                variant="destructive"
+                                                className="flex-1 md:flex-none h-9 text-xs md:text-sm"
+                                                disabled={isDeletingAll || initialData.length === 0}
+                                            >
+                                                {isDeletingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                                Удалить всё
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Удалить все записи</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Это действие необратимо. Весь справочник работ для вашей команды будет полностью удален.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground">Удалить всё</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </TooltipProvider>
+                    )}
+                    <Button className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={() => onInsertRequest()}>
+                        <Plus className="mr-2 h-4 w-4" /> Добавить
+                    </Button>
                 </div>
             </div>
 

@@ -571,7 +571,7 @@ export async function searchWorks(query: string): Promise<{ success: boolean; da
                 )
             )
             .orderBy(sql`${works.embedding} <=> ${JSON.stringify(queryEmbedding)}`)
-            .limit(20);
+            .limit(100);
 
         console.timeEnd(`searchWorks:${query}`);
         console.log(`Found ${results.length} results`);

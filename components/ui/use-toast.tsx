@@ -7,8 +7,10 @@ interface ToastOptions {
   variant?: 'default' | 'destructive';
 }
 
-const ToastContext = createContext({
-  toast: (_opts: ToastOptions) => {},
+const ToastContext = createContext<{
+  toast: (opts: ToastOptions) => void;
+}>({
+  toast: () => { },
 });
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {

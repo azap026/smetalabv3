@@ -42,8 +42,17 @@ interface DataTableProps<TData, TValue> {
 }
 
 // --- Stable Virtuoso Components ---
-const VirtuosoTableComponents: any = {
-    Table: ({ children, style, context, ...props }: any) => (
+interface VirtuosoHeader {
+    id: string;
+    column: {
+        columnDef: {
+            size?: number;
+        };
+    };
+}
+
+const VirtuosoTableComponents = {
+    Table: ({ children, style, context, ...props }: React.HTMLAttributes<HTMLTableElement> & { context?: { flatHeaders?: VirtuosoHeader[] } }) => (
         <table
             {...props}
             style={{
@@ -55,7 +64,7 @@ const VirtuosoTableComponents: any = {
             }}
         >
             <colgroup>
-                {context?.flatHeaders?.map((header: any) => (
+                {context?.flatHeaders?.map((header: VirtuosoHeader) => (
                     <col
                         key={header.id}
                         style={{ width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : 'auto' }}
@@ -65,13 +74,13 @@ const VirtuosoTableComponents: any = {
             {children}
         </table>
     ),
-    TableHead: React.forwardRef<HTMLTableSectionElement, any>((props, ref) => (
+    TableHead: React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
         <thead {...props} ref={ref} className="z-40" />
     )),
-    TableRow: (props: any) => (
+    TableRow: (props: React.HTMLAttributes<HTMLTableRowElement>) => (
         <tr {...props} className="border-b last:border-0 hover:bg-muted/30 transition-colors group group/row" />
     ),
-    TableBody: React.forwardRef<HTMLTableSectionElement, any>((props, ref) => (
+    TableBody: React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
         <tbody {...props} ref={ref} />
     )),
 };

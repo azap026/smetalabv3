@@ -21,7 +21,7 @@ export async function generateMissingEmbeddings(): Promise<{ success: boolean; p
             .select()
             .from(materials)
             .where(and(eq(materials.tenantId, team.id), isNull(materials.embedding)))
-            .limit(50); // Process 50 at a time to prevent timeouts
+            .limit(20); // Process 20 at a time to prevent DB connection issues
 
         // Get total remaining count for progress
         const countResult = await db
@@ -45,15 +45,14 @@ export async function generateMissingEmbeddings(): Promise<{ success: boolean; p
         }
 
         let updated = 0;
-        // Update records
-        // Ideally use a single query but Postgres doesn't easily support bulk update of different values without unnest
-        // Parallel updates are fine for 50 items
-        await Promise.all(materialsWithoutEmbedding.map(async (m, i) => {
+        // Update records sequentially to prevent connection pool exhaustion and timeouts
+        for (let i = 0; i < materialsWithoutEmbedding.length; i++) {
+            const m = materialsWithoutEmbedding[i];
             await db.update(materials)
                 .set({ embedding: embeddings[i], updatedAt: new Date() })
                 .where(eq(materials.id, m.id));
             updated++;
-        }));
+        }
 
         const remainingAfter = remainingTotal - updated;
 

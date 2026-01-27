@@ -108,9 +108,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
                     });
                 }
             });
-        }
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 

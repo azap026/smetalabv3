@@ -55,8 +55,9 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
     const file = formData.get('file') as File;
-    if (!file) return { success: false, message: 'Файл не найден.' };
-
+    if (!file) {
+        return { success: false, message: 'Файл не найден.' };
+    }
     try {
         const buffer = await file.arrayBuffer();
         const workbook = xlsx.read(buffer, { type: 'buffer' });

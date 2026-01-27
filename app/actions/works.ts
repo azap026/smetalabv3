@@ -8,6 +8,7 @@ import { db } from '@/lib/db/drizzle';
 import { works, NewWork } from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { generateEmbedding } from '@/lib/ai/embeddings';
+import { buildWorkContext } from '@/lib/ai/embedding-context';
 
 const headerMap: Record<string, string> = {
     'Код': 'code',
@@ -123,8 +124,7 @@ export async function importWorks(formData: FormData): Promise<{ success: boolea
         for (let i = 0; i < newWorks.length; i += BATCH_SIZE) {
             const batch = newWorks.slice(i, i + BATCH_SIZE);
             await Promise.all(batch.map(async (work) => {
-                const textToEmbed = `Работа: ${work.name}. Раздел: ${work.category || '—'}. Подраздел: ${work.subcategory || '—'}. Ед.изм: ${work.unit || '—'}.`;
-                work.embedding = await generateEmbedding(textToEmbed);
+                work.embedding = await generateEmbedding(buildWorkContext(work));
             }));
         }
 
@@ -280,16 +280,25 @@ export async function updateWork(id: string, data: Partial<NewWork>): Promise<{ 
 
         // If relevant fields are changing, regenerate embedding
         // We might need to fetch existing data if only partial update
-        if (data.name || data.category || data.subcategory || data.unit) {
+        if (data.name || data.category || data.subcategory || data.unit || data.description || data.shortDescription || data.phase || data.code) {
             // Fetch current work data to combine with updates
             const currentWork = await db.query.works.findFirst({
                 where: and(eq(works.id, id), eq(works.tenantId, team.id))
             });
 
             if (currentWork) {
-                const textToEmbed = `Работа: ${data.name ?? currentWork.name}. Раздел: ${data.category ?? currentWork.category ?? '—'}. Подраздел: ${data.subcategory ?? currentWork.subcategory ?? '—'}. Ед.изм: ${data.unit ?? currentWork.unit ?? '—'}.`;
+                const contextData = {
+                    name: data.name ?? currentWork.name,
+                    code: data.code ?? currentWork.code,
+                    description: data.description ?? currentWork.description,
+                    shortDescription: data.shortDescription ?? currentWork.shortDescription,
+                    category: data.category ?? currentWork.category,
+                    subcategory: data.subcategory ?? currentWork.subcategory,
+                    phase: data.phase ?? currentWork.phase,
+                    unit: data.unit ?? currentWork.unit
+                };
 
-                embedding = await generateEmbedding(textToEmbed);
+                embedding = await generateEmbedding(buildWorkContext(contextData));
             }
         }
 
@@ -322,8 +331,7 @@ export async function createWork(data: NewWork): Promise<{ success: boolean; mes
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
     try {
-        const textToEmbed = `Работа: ${data.name}. Раздел: ${data.category || '—'}. Подраздел: ${data.subcategory || '—'}. Ед.изм: ${data.unit || '—'}.`;
-        const embedding = await generateEmbedding(textToEmbed);
+        const embedding = await generateEmbedding(buildWorkContext(data));
 
         await db.insert(works).values({
             ...data,
@@ -499,8 +507,7 @@ export async function insertWorkAfter(afterId: string | null, data: NewWork): Pr
         }
 
         // Generate embedding
-        const textToEmbed = [data.name, data.category, data.subcategory, data.unit].filter(Boolean).join(' ');
-        const embedding = await generateEmbedding(textToEmbed);
+        const embedding = await generateEmbedding(buildWorkContext(data));
 
         await db.insert(works).values({
             ...data,

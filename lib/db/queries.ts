@@ -1,11 +1,12 @@
 import { desc, and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users, works } from './schema';
+import { activityLogs, teamMembers, teams, users, works, materials } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { WorkRow } from '@/types/work-row';
+import { MaterialRow } from '@/types/material-row';
 
 export const getUser = cache(async () => {
   const sessionCookie = (await cookies()).get('session');
@@ -179,6 +180,50 @@ export async function getWorks() {
     [`works-team-${teamId || 'public'}`],
     {
       tags: ['works', teamId ? `works-team-${teamId}` : 'works-public'],
+      revalidate: 3600,
+    }
+  )();
+}
+
+export async function getMaterials() {
+  const team = await getTeamForUser();
+  const teamId = team?.id;
+
+  return unstable_cache(
+    async () => {
+      return await db
+        .select({
+          id: materials.id,
+          tenantId: materials.tenantId,
+          code: materials.code,
+          name: materials.name,
+          unit: materials.unit,
+          price: materials.price,
+          category: materials.category,
+          subcategory: materials.subcategory,
+          shortDescription: materials.shortDescription,
+          description: materials.description,
+          status: materials.status,
+          metadata: materials.metadata,
+          tags: materials.tags,
+          createdAt: materials.createdAt,
+          updatedAt: materials.updatedAt,
+          deletedAt: materials.deletedAt,
+        })
+        .from(materials)
+        .where(
+          and(
+            isNull(materials.deletedAt),
+            teamId
+              ? or(isNull(materials.tenantId), eq(materials.tenantId, teamId))
+              : isNull(materials.tenantId)
+          )
+        )
+        .orderBy(materials.code) as unknown as MaterialRow[];
+    },
+    [`materials-team-${teamId || 'public'}`],
+    {
+      tags: ['materials', teamId ? `materials-team-${teamId}` : 'materials-public'],
       revalidate: 3600,
     }
   )();

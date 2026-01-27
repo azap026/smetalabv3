@@ -266,6 +266,38 @@ export const works = pgTable('works', {
 ]);
 
 // ═══════════════════════════════════════════════════════════════
+// MATERIALS (Guide)
+// ═══════════════════════════════════════════════════════════════
+
+export const materials = pgTable('materials', {
+  id: text('id').default(sql`gen_random_uuid()`).primaryKey(),
+  tenantId: integer('tenant_id').references(() => teams.id),
+
+  code: varchar('code', { length: 64 }).notNull(),
+  name: text('name').notNull(),
+  unit: varchar('unit', { length: 20 }),
+  price: integer('price'),
+  shortDescription: text('short_description'),
+  description: text('description'),
+
+  category: text('category'),
+  subcategory: text('subcategory'),
+  tags: text('tags').array(),
+
+  status: workStatusEnum('status').notNull().default('draft'),
+  metadata: jsonb('metadata').default({}),
+
+  embedding: vector('embedding', { dimensions: 1536 }),
+
+  deletedAt: timestamp('deleted_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => [
+  index('materials_tenant_status_idx').on(table.tenantId).where(sql`deleted_at IS NULL AND status = 'active'`),
+  uniqueIndex('idx_materials_code_tenant_unique').on(table.tenantId, table.code),
+]);
+
+// ═══════════════════════════════════════════════════════════════
 // RELATIONS
 // ═══════════════════════════════════════════════════════════════
 
@@ -275,6 +307,8 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   invitations: many(invitations),
   estimateShares: many(estimateShares),
   impersonationSessions: many(impersonationSessions),
+  works: many(works),
+  materials: many(materials),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -377,6 +411,13 @@ export const worksRelations = relations(works, ({ one }) => ({
   }),
 }));
 
+export const materialsRelations = relations(materials, ({ one }) => ({
+  tenant: one(teams, {
+    fields: [materials.tenantId],
+    references: [teams.id],
+  }),
+}));
+
 // ═══════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════
@@ -401,6 +442,8 @@ export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type Work = typeof works.$inferSelect;
 export type NewWork = typeof works.$inferInsert;
+export type Material = typeof materials.$inferSelect;
+export type NewMaterial = typeof materials.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {

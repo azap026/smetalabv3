@@ -22,112 +22,18 @@ export const hasPermission = cache(async function (
     requiredLevel: 'read' | 'manage' = 'read',
     ctx?: { impersonationSessionId?: string }
 ): Promise<boolean> {
-    // 1. Fetch permission definition
-    const [permission] = await db
-        .select()
-        .from(permissions)
-        .where(eq(permissions.code, permissionCode))
-        .limit(1);
+    const permissions = await getUserPermissions(userId, tenantId, ctx);
+    const permission = permissions.find((p) => p.code === permissionCode);
 
     if (!permission) {
         return false;
     }
 
-    // 2. Fetch user
-    const [user] = await db
-        .select()
-        .from(users)
-        .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-        .limit(1);
-
-    if (!user) return false;
-
-    // --- PLATFORM SCOPE ---
-    if (permission.scope === 'platform') {
-        if (!user.platformRole) return false;
-
-        // Check if the role has this permission
-        const [rolePerm] = await db
-            .select()
-            .from(platformRolePermissions)
-            .where(
-                and(
-                    eq(platformRolePermissions.platformRole, user.platformRole),
-                    eq(platformRolePermissions.permissionId, permission.id)
-                )
-            )
-            .limit(1);
-
-        if (!rolePerm) return false;
-
-        // Level check: 'manage' > 'read'
-        if (requiredLevel === 'manage' && rolePerm.accessLevel !== 'manage') return false;
-
-        return true;
+    if (requiredLevel === 'manage' && permission.level !== 'manage') {
+        return false;
     }
 
-    // --- TENANT SCOPE ---
-    if (permission.scope === 'tenant') {
-        // A. Superadmin Access (via valid impersonation session)
-        if (user.platformRole === 'superadmin' && ctx?.impersonationSessionId) {
-            const [session] = await db
-                .select()
-                .from(impersonationSessions)
-                .where(
-                    and(
-                        eq(impersonationSessions.sessionToken, ctx.impersonationSessionId),
-                        eq(impersonationSessions.superadminUserId, userId),
-                        isNull(impersonationSessions.endedAt)
-                    )
-                )
-                .limit(1);
-
-            if (session) {
-                // Basic check: is this session for the requested tenant?
-                if (tenantId === null || session.targetTeamId === tenantId) {
-                    return true;
-                }
-            }
-        }
-
-        // B. Regular User Access (also applies to superadmins without active impersonation)
-        if (!tenantId) return false;
-
-        const [member] = await db
-            .select()
-            .from(teamMembers)
-            .where(
-                and(
-                    eq(teamMembers.userId, userId),
-                    eq(teamMembers.teamId, tenantId),
-                    isNull(teamMembers.leftAt)
-                )
-            )
-            .limit(1);
-
-        if (!member) return false;
-
-        // Check if the tenant role has this permission
-        const [rolePerm] = await db
-            .select()
-            .from(rolePermissions)
-            .where(
-                and(
-                    eq(rolePermissions.role, member.role),
-                    eq(rolePermissions.permissionId, permission.id)
-                )
-            )
-            .limit(1);
-
-        if (!rolePerm) return false;
-
-        // Level check: 'manage' > 'read'
-        if (requiredLevel === 'manage' && rolePerm.accessLevel !== 'manage') return false;
-
-        return true;
-    }
-
-    return false;
+    return true;
 });
 
 /**
@@ -174,17 +80,35 @@ export const getUserPermissions = cache(async function (
     }
 
     // 2. Get Tenant Permissions
+    let isImpersonating = false;
     if (user.platformRole === 'superadmin' && ctx?.impersonationSessionId) {
-        // Superadmin in impersonation sees all tenant permissions with 'manage' level
-        const tenantPerms = await db
-            .select({ code: permissions.code })
-            .from(permissions)
-            .where(eq(permissions.scope, 'tenant'));
+        const [session] = await db
+            .select()
+            .from(impersonationSessions)
+            .where(
+                and(
+                    eq(impersonationSessions.sessionToken, ctx.impersonationSessionId),
+                    eq(impersonationSessions.superadminUserId, userId),
+                    isNull(impersonationSessions.endedAt)
+                )
+            )
+            .limit(1);
 
-        for (const p of tenantPerms) {
-            permsMap.set(p.code, 'manage');
+        if (session && (tenantId === null || session.targetTeamId === tenantId)) {
+            isImpersonating = true;
+            // Superadmin in impersonation sees all tenant permissions with 'manage' level
+            const tenantPerms = await db
+                .select({ code: permissions.code })
+                .from(permissions)
+                .where(eq(permissions.scope, 'tenant'));
+
+            for (const p of tenantPerms) {
+                permsMap.set(p.code, 'manage');
+            }
         }
-    } else if (tenantId) {
+    }
+
+    if (!isImpersonating && tenantId) {
         const [member] = await db
             .select()
             .from(teamMembers)

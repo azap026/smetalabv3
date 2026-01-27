@@ -197,9 +197,9 @@ export async function getMaterials(limit?: number) {
       name: materials.name,
       unit: materials.unit,
       price: materials.price,
-      category: materials.category,
-      subcategory: materials.subcategory,
-      shortDescription: materials.shortDescription,
+      // category: materials.category, // Removed
+      // subcategory: materials.subcategory, // Removed
+      // shortDescription: materials.shortDescription, // Removed
       description: materials.description,
       status: materials.status,
       metadata: materials.metadata,

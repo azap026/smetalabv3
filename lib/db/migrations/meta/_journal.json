@@ -92,6 +92,13 @@
       "when": 1769527591770,
       "tag": "0012_rich_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1769533832075,
+      "tag": "0013_mean_stranger",
+      "breakpoints": true
     }
   ]
 }

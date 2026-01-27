@@ -286,11 +286,8 @@ export const materials = pgTable('materials', {
   productUrl: text('product_url'),
   imageUrl: text('image_url'),
 
-  shortDescription: text('short_description'),
   description: text('description'),
 
-  category: text('category'),
-  subcategory: text('subcategory'),
   tags: text('tags').array(),
 
   status: workStatusEnum('status').notNull().default('draft'),

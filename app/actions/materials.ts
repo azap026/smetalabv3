@@ -134,9 +134,9 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
                 categoryLv4: row.categoryLv4 ? String(row.categoryLv4) : undefined,
                 productUrl: row.productUrl ? String(row.productUrl) : undefined,
                 imageUrl: row.imageUrl ? String(row.imageUrl) : undefined,
-                category: row.category ? String(row.category) : undefined,
-                subcategory: row.subcategory ? String(row.subcategory) : undefined,
-                shortDescription: row.shortDescription ? String(row.shortDescription) : undefined,
+                // category: row.category ? String(row.category) : undefined,
+                // subcategory: row.subcategory ? String(row.subcategory) : undefined,
+                // shortDescription: row.shortDescription ? String(row.shortDescription) : undefined,
                 description: row.description ? String(row.description) : undefined,
                 status: 'active',
             };
@@ -166,9 +166,9 @@ export async function importMaterials(formData: FormData): Promise<{ success: bo
                         categoryLv4: sql`excluded.category_lv4`,
                         productUrl: sql`excluded.product_url`,
                         imageUrl: sql`excluded.image_url`,
-                        category: sql`excluded.category`,
-                        subcategory: sql`excluded.subcategory`,
-                        shortDescription: sql`excluded.short_description`,
+                        // category: sql`excluded.category`,
+                        // subcategory: sql`excluded.subcategory`,
+                        // shortDescription: sql`excluded.short_description`,
                         description: sql`excluded.description`,
                         // embedding: sql`excluded.embedding`, // Keep old embedding if exists
                         updatedAt: new Date(),
@@ -207,6 +207,7 @@ export async function exportMaterials(): Promise<{ success: boolean; data?: Reco
                 'Категория LV4': materials.categoryLv4,
                 'URL товара': materials.productUrl,
                 'URL изображения': materials.imageUrl,
+                'Описание': materials.description,
             })
             .from(materials)
             .where(and(eq(materials.tenantId, team.id), eq(materials.status, 'active'), isNull(materials.deletedAt)));
@@ -248,7 +249,7 @@ export async function updateMaterial(id: string, data: Partial<NewMaterial>): Pr
 
     try {
         let embedding: number[] | null | undefined = undefined;
-        if (data.name || data.category || data.subcategory || data.unit || data.vendor || data.categoryLv1) {
+        if (data.name || data.unit || data.vendor || data.categoryLv1) {
             const current = await db.query.materials.findFirst({
                 where: and(eq(materials.id, id), eq(materials.tenantId, team.id))
             });
@@ -307,10 +308,10 @@ export async function searchMaterials(query: string): Promise<{ success: boolean
             categoryLv4: materials.categoryLv4,
             productUrl: materials.productUrl,
             imageUrl: materials.imageUrl,
-            category: materials.category,
-            subcategory: materials.subcategory,
-            shortDescription: materials.shortDescription,
             description: materials.description,
+            // category: materials.category,
+            // subcategory: materials.subcategory,
+            // shortDescription: materials.shortDescription,
             status: materials.status,
             metadata: materials.metadata,
             tags: materials.tags,

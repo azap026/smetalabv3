@@ -8,6 +8,7 @@ import { db } from '@/lib/db/drizzle';
 import { materials, NewMaterial } from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { generateEmbedding, generateEmbeddingsBatch } from '@/lib/ai/embeddings';
+import { buildMaterialContext } from '@/lib/ai/embedding-context';
 import { MaterialRow } from '@/types/material-row';
 import { getMaterials } from '@/lib/db/queries';
 
@@ -34,9 +35,7 @@ export async function generateMissingEmbeddings(): Promise<{ success: boolean; p
             return { success: true, processed: 0, remaining: 0, message: 'Все индексы сгенерированы' };
         }
 
-        const texts = materialsWithoutEmbedding.map(m => {
-            return `Материал: ${m.name}. Код: ${m.code}. Поставщик: ${m.vendor || '—'}. Категории: ${[m.categoryLv1, m.categoryLv2, m.categoryLv3, m.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${m.unit || '—'}. ${m.description || ''}`;
-        });
+        const texts = materialsWithoutEmbedding.map(m => buildMaterialContext(m));
 
         const embeddings = await generateEmbeddingsBatch(texts);
 
@@ -302,13 +301,24 @@ export async function updateMaterial(id: string, data: Partial<NewMaterial>): Pr
 
     try {
         let embedding: number[] | null | undefined = undefined;
-        if (data.name || data.unit || data.vendor || data.categoryLv1) {
+        if (data.name || data.unit || data.vendor || data.categoryLv1 || data.description || data.code) {
             const current = await db.query.materials.findFirst({
                 where: and(eq(materials.id, id), eq(materials.tenantId, team.id))
             });
             if (current) {
-                const text = `Материал: ${data.name ?? current.name}. Код: ${data.code ?? current.code}. Поставщик: ${data.vendor ?? current.vendor ?? '—'}. Категории: ${[data.categoryLv1 ?? current.categoryLv1, data.categoryLv2 ?? current.categoryLv2, data.categoryLv3 ?? current.categoryLv3, data.categoryLv4 ?? current.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${data.unit ?? current.unit ?? '—'}.`;
-                embedding = await generateEmbedding(text);
+                const contextData = {
+                    name: data.name ?? current.name,
+                    code: data.code ?? current.code,
+                    description: data.description ?? current.description,
+                    categoryLv1: data.categoryLv1 ?? current.categoryLv1,
+                    categoryLv2: data.categoryLv2 ?? current.categoryLv2,
+                    categoryLv3: data.categoryLv3 ?? current.categoryLv3,
+                    categoryLv4: data.categoryLv4 ?? current.categoryLv4,
+                    vendor: data.vendor ?? current.vendor,
+                    unit: data.unit ?? current.unit,
+                    weight: data.weight ?? current.weight
+                };
+                embedding = await generateEmbedding(buildMaterialContext(contextData));
             }
         }
 
@@ -326,8 +336,7 @@ export async function createMaterial(data: NewMaterial): Promise<{ success: bool
     if (!team) return { success: false, message: 'Команда не найдена.' };
 
     try {
-        const text = `Материал: ${data.name}. Код: ${data.code}. Поставщик: ${data.vendor || '—'}. Категории: ${[data.categoryLv1, data.categoryLv2, data.categoryLv3, data.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${data.unit || '—'}.`;
-        const embedding = await generateEmbedding(text);
+        const embedding = await generateEmbedding(buildMaterialContext(data));
         await db.insert(materials).values({ ...data, tenantId: team.id, status: 'active', embedding });
         revalidatePath('/app/guide/materials');
         return { success: true, message: 'Добавлено.' };

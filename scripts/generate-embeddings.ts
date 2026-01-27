@@ -1,8 +1,9 @@
 
-import { db, client } from '@/lib/db/drizzle';
+import { db } from '@/lib/db/drizzle';
 import { materials } from '@/lib/db/schema';
 import { generateEmbeddingsBatch } from '@/lib/ai/embeddings';
-import { eq, isNull, and, sql } from 'drizzle-orm';
+import { buildMaterialContext } from '@/lib/ai/embedding-context';
+import { eq, isNull } from 'drizzle-orm';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -41,9 +42,7 @@ async function main() {
         console.log(`📦 Processing batch of ${batch.length} items...`);
 
         // Prepare texts
-        const texts = batch.map(m => {
-            return `Материал: ${m.name}. Код: ${m.code}. Поставщик: ${m.vendor || '—'}. Категории: ${[m.categoryLv1, m.categoryLv2, m.categoryLv3, m.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${m.unit || '—'}. ${m.description || ''}`;
-        });
+        const texts = batch.map(m => buildMaterialContext(m));
 
         // Generate embeddings
         const embeddings = await generateEmbeddingsBatch(texts);

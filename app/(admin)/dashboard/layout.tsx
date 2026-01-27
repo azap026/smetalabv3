@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AdminSidebar } from '@/components/admin-sidebar';
+import { UserMenu } from '@/components/user-menu';
 import { getUser } from '@/lib/db/queries';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -16,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <span className="font-semibold text-lg">Admin Dashboard</span>
           </div>
           <div>
-            {/* TODO: Admin user menu */}
+            <UserMenu />
           </div>
         </header>
         <main className="flex-1 p-6">

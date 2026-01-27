@@ -13,7 +13,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { signOut } from '@/app/(login)/actions';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import useSWR, { mutate } from 'swr';
 import { User as UserType } from '@/lib/db/schema';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -29,6 +29,7 @@ export function UserMenu() {
     const [mounted, setMounted] = React.useState(false);
     const { data: user } = useSWR<UserWithPermissions>('/api/user', fetcher);
     const router = useRouter();
+    const pathname = usePathname();
     const { hasPermission } = usePermissions();
 
     React.useEffect(() => {
@@ -98,7 +99,7 @@ export function UserMenu() {
                         <span>Настройки</span>
                     </DropdownMenuItem>
                 )}
-                {hasPermission('platform.tenants', 'read') && (
+                {hasPermission('platform.tenants', 'read') && !pathname?.startsWith('/dashboard') && (
                     <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => router.push('/dashboard')}>

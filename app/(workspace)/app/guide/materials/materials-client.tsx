@@ -80,17 +80,28 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            console.log(`Sending file: ${file.name}, size: ${file.size} bytes`);
-            const formData = new FormData();
-            formData.append('file', file);
-            startImportTransition(async () => {
-                const result = await importMaterials(formData);
-                if (result.success) {
-                    toast({ title: "Импорт завершен", description: result.message });
-                } else {
-                    toast({ variant: "destructive", title: "Ошибка импорта", description: result.message });
-                }
-            });
+            console.log(`Reading file: ${file.name}, size: ${file.size} bytes`);
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const base64 = reader.result as string;
+                // Remove prefix like "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,"
+                const base64Content = base64.split(',')[1];
+
+                console.log('Sending Base64 content to server...');
+                startImportTransition(async () => {
+                    const result = await importMaterials(base64Content, file.name);
+                    if (result.success) {
+                        toast({ title: "Импорт завершен", description: result.message });
+                    } else {
+                        toast({ variant: "destructive", title: "Ошибка импорта", description: result.message });
+                    }
+                });
+            };
+            reader.onerror = () => {
+                toast({ variant: "destructive", title: "Ошибка чтения файла" });
+            };
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
     };

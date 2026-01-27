@@ -47,3 +47,4 @@ postgres_data/
 /bin
 .env.test
 \n*.png\n*.log
+*.csv

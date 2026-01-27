@@ -10,6 +10,7 @@
     "db:seed:permissions": "npx tsx lib/db/seed-permissions.ts",
     "db:assign-role": "npx tsx lib/db/assign-role.ts",
     "db:reset-password": "npx tsx lib/db/reset-password.ts",
+    "generate:embeddings": "npx tsx scripts/generate-embeddings.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio --host 127.0.0.1",

@@ -12,11 +12,18 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 async function main() {
     console.log('🚀 Starting offline embedding generation...');
 
+    if (!process.env.OPENAI_API_KEY) {
+        console.error('❌ CRITICAL: OPENAI_API_KEY is not defined in environment variables. Exiting.');
+        process.exit(1);
+    }
+
     // 1. Get user/team context (Optional: or just process ALL missing embeddings globally?)
     // For safety, let's process ALL missing embeddings in the DB since this is an admin script.
 
     const BATCH_SIZE = 50; // Larger batch size for local script
     let totalProcessed = 0;
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE_ERRORS = 3;
 
     while (true) {
         // Fetch batch
@@ -42,10 +49,20 @@ async function main() {
         const embeddings = await generateEmbeddingsBatch(texts);
 
         if (!embeddings || embeddings.length !== batch.length) {
-            console.error('❌ Error generating embeddings for batch. Retrying in 5s...');
+            consecutiveErrors++;
+            console.error(`❌ Error generating embeddings for batch (Attempt ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}). Retrying in 5s...`);
+
+            if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                console.error('❌ Too many consecutive errors. Aborting script.');
+                process.exit(1);
+            }
+
             await new Promise(r => setTimeout(r, 5000));
             continue;
         }
+
+        // Reset error counter on success
+        consecutiveErrors = 0;
 
         // Update DB (Parallel is fine here as script is single-thread dominant and we want speed, 
         // but sequential is safer for connection pool. Let's do Promise.all with some concurrency control if needed, 

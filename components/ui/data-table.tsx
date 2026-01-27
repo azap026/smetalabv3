@@ -162,7 +162,16 @@ export function DataTable<TData, TValue>({
                             onChange={(event) => {
                                 const val = event.target.value
                                 setSearchValue(val)
-                                setIsAiMode(false)
+
+                                // If we were in AI mode and user changed text, exit AI mode and reset data
+                                if (isAiMode) {
+                                    setIsAiMode(false)
+                                    onAiSearch?.("")
+                                } else if (val === "") {
+                                    // If just clearing normal search
+                                    onAiSearch?.("")
+                                }
+
                                 table.getColumn(filterColumn)?.setFilterValue(val)
                             }}
                             className={cn(

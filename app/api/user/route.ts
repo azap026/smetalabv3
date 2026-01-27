@@ -1,7 +1,7 @@
 import { getUser } from '@/lib/db/queries';
 import { getUserPermissions } from '@/lib/auth/rbac';
 import { db } from '@/lib/db/drizzle';
-import { users, teamMembers, rolePermissions, permissions } from '@/lib/db/schema';
+import { teamMembers } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 
 /**
@@ -19,22 +19,13 @@ export async function GET() {
     return Response.json(null);
   }
 
-  // Optimized single-roundtrip query to get user, team, and permissions
-  const result = await db
-    .select({
-      teamId: teamMembers.teamId,
-      role: teamMembers.role,
-      permissionCode: permissions.code,
-      accessLevel: rolePermissions.accessLevel,
-      platformRole: users.platformRole,
-    })
-    .from(users)
-    .leftJoin(teamMembers, and(eq(users.id, teamMembers.userId), isNull(teamMembers.leftAt)))
-    .leftJoin(rolePermissions, eq(teamMembers.role, rolePermissions.role))
-    .leftJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(eq(users.id, user.id));
+  // Optimized: Just get the team ID. Permissions are fetched by getUserPermissions.
+  const teamMember = await db.query.teamMembers.findFirst({
+    where: and(eq(teamMembers.userId, user.id), isNull(teamMembers.leftAt)),
+    columns: { teamId: true },
+  });
 
-  const teamId = result[0]?.teamId ?? null;
+  const teamId = teamMember?.teamId ?? null;
   // Get all permissions correctly (platform + tenant) with levels
   const userPermissions = await getUserPermissions(user, teamId);
 

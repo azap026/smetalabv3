@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { LogOut, Settings, Users, Shield } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,9 +26,14 @@ type UserWithPermissions = UserType & {
 };
 
 export function UserMenu() {
+    const [mounted, setMounted] = React.useState(false);
     const { data: user } = useSWR<UserWithPermissions>('/api/user', fetcher);
     const router = useRouter();
     const { hasPermission } = usePermissions();
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     async function handleSignOut() {
         await signOut();
@@ -48,11 +54,13 @@ export function UserMenu() {
         return user.email.slice(0, 2).toUpperCase();
     };
 
-    if (!user) {
+    if (!mounted || !user) {
         return (
-            <Avatar className="h-8 w-8">
-                <AvatarFallback>?</AvatarFallback>
-            </Avatar>
+            <Button variant="ghost" className="relative h-8 w-8 rounded-full" disabled>
+                <Avatar className="h-8 w-8">
+                    <AvatarFallback>{user ? getUserInitials(user) : '?'}</AvatarFallback>
+                </Avatar>
+            </Button>
         );
     }
 

@@ -8,8 +8,9 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import * as React from 'react';
 import useSWR, { mutate } from 'swr';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Notification {
     id: number;
@@ -40,10 +41,24 @@ function timeAgo(dateString: string) {
 }
 
 export function NotificationBell() {
+    const [mounted, setMounted] = useState(false);
     const { data: notifications, isLoading } = useSWR<Notification[]>('/api/notifications', fetcher);
     const [isOpen, setIsOpen] = useState(false);
 
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const unreadCount = notifications?.filter((n) => !n.read).length || 0;
+
+    if (!mounted) {
+        return (
+            <Button variant="ghost" size="icon" className="relative" disabled>
+                <Bell className="h-5 w-5" />
+                <span className="sr-only">Уведомления</span>
+            </Button>
+        );
+    }
 
     const handleMarkAsRead = async (id: number) => {
         // Optimistic update

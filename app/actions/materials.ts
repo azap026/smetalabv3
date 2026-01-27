@@ -7,9 +7,63 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
 import { materials, NewMaterial } from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
-import { generateEmbedding } from '@/lib/ai/embeddings';
+import { generateEmbedding, generateEmbeddingsBatch } from '@/lib/ai/embeddings';
 import { MaterialRow } from '@/types/material-row';
 import { getMaterials } from '@/lib/db/queries';
+
+export async function generateMissingEmbeddings(): Promise<{ success: boolean; processed: number; remaining: number; message?: string }> {
+    const team = await getTeamForUser();
+    if (!team) return { success: false, processed: 0, remaining: 0, message: 'Команда не найдена' };
+
+    try {
+        // Find items without embeddings
+        const materialsWithoutEmbedding = await db
+            .select()
+            .from(materials)
+            .where(and(eq(materials.tenantId, team.id), isNull(materials.embedding)))
+            .limit(50); // Process 50 at a time to prevent timeouts
+
+        // Get total remaining count for progress
+        const countResult = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(materials)
+            .where(and(eq(materials.tenantId, team.id), isNull(materials.embedding)));
+        const remainingTotal = Number(countResult[0]?.count || 0);
+
+        if (materialsWithoutEmbedding.length === 0) {
+            return { success: true, processed: 0, remaining: 0, message: 'Все индексы сгенерированы' };
+        }
+
+        const texts = materialsWithoutEmbedding.map(m => {
+            return `Материал: ${m.name}. Код: ${m.code}. Поставщик: ${m.vendor || '—'}. Категории: ${[m.categoryLv1, m.categoryLv2, m.categoryLv3, m.categoryLv4].filter(Boolean).join(' > ') || '—'}. Ед.изм: ${m.unit || '—'}. ${m.description || ''}`;
+        });
+
+        const embeddings = await generateEmbeddingsBatch(texts);
+
+        if (!embeddings || embeddings.length !== materialsWithoutEmbedding.length) {
+            return { success: false, processed: 0, remaining: remainingTotal, message: 'Ошибка генерации AI' };
+        }
+
+        let updated = 0;
+        // Update records
+        // Ideally use a single query but Postgres doesn't easily support bulk update of different values without unnest
+        // Parallel updates are fine for 50 items
+        await Promise.all(materialsWithoutEmbedding.map(async (m, i) => {
+            await db.update(materials)
+                .set({ embedding: embeddings[i], updatedAt: new Date() })
+                .where(eq(materials.id, m.id));
+            updated++;
+        }));
+
+        const remainingAfter = remainingTotal - updated;
+
+        return { success: true, processed: updated, remaining: remainingAfter };
+
+    } catch (e) {
+        console.error("Batch embedding error", e);
+        return { success: false, processed: 0, remaining: 0, message: 'Ошибка сервера' };
+    }
+}
 
 export async function fetchMoreMaterials(): Promise<{ success: boolean; data?: MaterialRow[] }> {
     try {

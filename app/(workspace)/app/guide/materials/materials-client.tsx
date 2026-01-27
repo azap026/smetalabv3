@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRef, useTransition, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Download, Trash2, Loader2, Plus } from 'lucide-react';
+import { Upload, Download, Trash2, Loader2, Plus, Sparkles } from 'lucide-react';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
-import { exportMaterials, deleteAllMaterials, createMaterial, searchMaterials, fetchMoreMaterials } from '@/app/actions/materials';
+import { exportMaterials, deleteAllMaterials, createMaterial, searchMaterials, fetchMoreMaterials, generateMissingEmbeddings } from '@/app/actions/materials';
 import * as xlsx from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -147,6 +147,45 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
         });
     };
 
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleGenerateEmbeddings = async () => {
+        setIsGenerating(true);
+        toast({ title: "Генерация AI-индексов", description: "Начинаем обработку... (это может занять время)" });
+
+        try {
+            let done = false;
+            let totalProcessed = 0;
+
+            while (!done) {
+                const res = await generateMissingEmbeddings();
+                if (!res.success) {
+                    toast({ variant: "destructive", title: "Ошибка", description: res.message });
+                    break;
+                }
+
+                if (res.processed === 0 && res.remaining === 0) {
+                    done = true;
+                    toast({ title: "Готово", description: "Все материалы проиндексированы." });
+                } else {
+                    totalProcessed += res.processed;
+                    if (totalProcessed % 200 === 0) {
+                        toast({ title: "Обработка...", description: `Обработано: ${totalProcessed}. Осталось: ${res.remaining}` });
+                    }
+                    if (res.remaining === 0) {
+                        done = true;
+                        toast({ title: "Успех", description: `Завершено. Обработано ${totalProcessed} записей.` });
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            toast({ variant: "destructive", title: "Ошибка", description: "Сбой процесса." });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const [isInserting, startInsertTransition] = useTransition();
 
     const onInsertRequest = (afterId?: string) => {
@@ -277,6 +316,16 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent><p>Загрузить данные</p></TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="outline" className="flex-1 md:flex-none h-9 text-xs md:text-sm" onClick={handleGenerateEmbeddings} disabled={isGenerating || isImporting}>
+                                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-indigo-500" />}
+                                        AI-индекс
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Сгенерировать индексы для умного поиска</p></TooltipContent>
                             </Tooltip>
 
                             <Tooltip>

@@ -251,6 +251,8 @@ export const works = pgTable('works', {
   subcategory: text('subcategory'),
   tags: text('tags').array(), // pgCore text array
 
+  sortOrder: integer('sort_order').array().generatedAlwaysAs(sql`CASE WHEN code ~ '^[0-9]+(\\.[0-9]+)*$' THEN string_to_array(code, '.')::integer[] ELSE NULL END`),
+
   status: workStatusEnum('status').notNull().default('draft'),
   metadata: jsonb('metadata').default({}),
 
@@ -262,6 +264,7 @@ export const works = pgTable('works', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => [
   index('works_tenant_status_idx').on(table.tenantId).where(sql`deleted_at IS NULL AND status = 'active'`),
+  index('works_sort_order_idx').on(table.sortOrder),
   uniqueIndex('idx_works_code_tenant_unique').on(table.tenantId, table.code),
 ]);
 

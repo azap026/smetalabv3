@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { usePermissionsContext } from '@/components/permissions-provider';
+import { useCallback } from 'react';
 
-interface PermissionEntry {
+// Re-export type if needed, or import from provider
+export interface PermissionEntry {
     code: string;
     level: 'read' | 'manage';
 }
@@ -17,28 +19,12 @@ interface UsePermissionsResult {
 }
 
 export function usePermissions(): UsePermissionsResult {
-    const [permissions, setPermissions] = useState<PermissionEntry[]>([]);
-    const [loading, setLoading] = useState(true);
+    // We assume this is used inside PermissionsProvider. 
+    // If used outside, it throws (which is good, catches bugs).
+    // Or we could try catch? But strict is better.
+    const { permissions } = usePermissionsContext();
 
-    useEffect(() => {
-        async function fetchPermissions() {
-            try {
-                const response = await fetch('/api/user');
-                if (response.ok) {
-                    const data = await response.json();
-                    setPermissions(data.permissions || []);
-                }
-            } catch (error) {
-                console.error('Failed to fetch permissions:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchPermissions();
-    }, []);
-
-    const hasPermission = (code: string, requiredLevel: 'read' | 'manage' = 'read'): boolean => {
+    const hasPermission = useCallback((code: string, requiredLevel: 'read' | 'manage' = 'read'): boolean => {
         const perm = permissions.find(p => p.code === code);
         if (!perm) return false;
 
@@ -46,19 +32,19 @@ export function usePermissions(): UsePermissionsResult {
             return perm.level === 'manage';
         }
 
-        return true; // if they have it at all, they can read
-    };
+        return true;
+    }, [permissions]);
 
-    const canRead = (code: string) => hasPermission(code, 'read');
-    const canManage = (code: string) => hasPermission(code, 'manage');
+    const canRead = useCallback((code: string) => hasPermission(code, 'read'), [hasPermission]);
+    const canManage = useCallback((code: string) => hasPermission(code, 'manage'), [hasPermission]);
 
-    const hasAnyPermission = (...codes: string[]): boolean => {
+    const hasAnyPermission = useCallback((...codes: string[]): boolean => {
         return codes.some(code => permissions.some(p => p.code === code));
-    };
+    }, [permissions]);
 
     return {
         permissions,
-        loading,
+        loading: false, // No loading anymore, data is SRR/Hydrated
         hasPermission,
         canRead,
         canManage,

@@ -268,6 +268,7 @@ export const works = pgTable('works', {
   index('works_sort_order_idx').on(table.sortOrder),
   uniqueIndex('idx_works_code_tenant_unique').on(table.tenantId, table.code),
   index('works_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
+  index('works_tenant_unit_idx').on(table.tenantId, table.unit),
 ]);
 
 // ═══════════════════════════════════════════════════════════════
@@ -308,6 +309,7 @@ export const materials = pgTable('materials', {
   uniqueIndex('idx_materials_code_tenant_unique').on(table.tenantId, table.code),
   index('materials_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),
   index('materials_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
+  index('materials_tenant_unit_idx').on(table.tenantId, table.unit),
 ]);
 
 // ═══════════════════════════════════════════════════════════════

@@ -17,6 +17,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import useSWR, { mutate } from 'swr';
 import { User as UserType } from '@/lib/db/schema';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useUserContext } from '@/components/permissions-provider';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -27,7 +28,7 @@ type UserWithPermissions = UserType & {
 
 export function UserMenu() {
     const [mounted, setMounted] = React.useState(false);
-    const { data: user } = useSWR<UserWithPermissions>('/api/user', fetcher);
+    const { user, loading } = useUserContext();
     const router = useRouter();
     const pathname = usePathname();
     const { hasPermission } = usePermissions();
@@ -38,11 +39,12 @@ export function UserMenu() {
 
     async function handleSignOut() {
         await signOut();
-        mutate('/api/user');
+        // mutate('/api/user'); // No longer needed with server actions/context reload
         router.push('/');
+        router.refresh();
     }
 
-    const getUserInitials = (user: UserType | undefined) => {
+    const getUserInitials = (user: UserType | undefined | null) => {
         if (!user) return '?';
         if (user.name) {
             return user.name
@@ -55,11 +57,11 @@ export function UserMenu() {
         return user.email.slice(0, 2).toUpperCase();
     };
 
-    if (!mounted || !user) {
+    if (!mounted || loading || !user) {
         return (
             <Button variant="ghost" className="relative h-8 w-8 rounded-full" disabled>
                 <Avatar className="h-8 w-8">
-                    <AvatarFallback>{user ? getUserInitials(user) : '?'}</AvatarFallback>
+                    <AvatarFallback>?</AvatarFallback>
                 </Avatar>
             </Button>
         );

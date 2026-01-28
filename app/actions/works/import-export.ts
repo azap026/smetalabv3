@@ -11,7 +11,7 @@ import { error, success } from '@/lib/utils/result';
 import { worksHeaderMap, worksRequiredFields } from '@/lib/constants/import-configs';
 
 
-export const importWorks = safeAction(async ({ team }, formData: FormData) => {
+export const importWorks = safeAction(async function importWorksHandler({ team }, formData: FormData) {
     const file = formData.get('file') as File;
     if (!file) return error('Файл не найден');
 
@@ -43,9 +43,9 @@ export const importWorks = safeAction(async ({ team }, formData: FormData) => {
         return success(undefined, `Импорт завершен. Загружено записей: ${newWorks.length}`);
     }
     return result;
-});
+}, { name: 'importWorks' });
 
-export const exportWorks = safeAction(async ({ team }) => {
+export const exportWorks = safeAction(async function exportWorksHandler({ team }) {
     const worksData = await db
         .select({
             code: works.code,
@@ -62,4 +62,4 @@ export const exportWorks = safeAction(async ({ team }) => {
         .where(and(or(isNull(works.tenantId), eq(works.tenantId, team.id)), eq(works.status, 'active'), isNull(works.deletedAt)));
 
     return success(worksData);
-});
+}, { name: 'exportWorks' });

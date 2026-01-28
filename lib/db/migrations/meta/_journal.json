@@ -127,6 +127,13 @@
       "when": 1769626245928,
       "tag": "0017_first_bucky",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1769631173567,
+      "tag": "0018_parallel_onslaught",
+      "breakpoints": true
     }
   ]
 }

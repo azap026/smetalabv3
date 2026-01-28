@@ -46,6 +46,10 @@ interface DataTableProps<TData, TValue> {
     meta?: TableMeta<TData>
     showAiSearch?: boolean
     onAiSearch?: (query: string) => void
+    isAiMode?: boolean
+    onAiModeChange?: (val: boolean) => void
+    externalSearchValue?: string
+    onSearchValueChange?: (val: string) => void
 }
 
 // --- Stable Virtuoso Components ---
@@ -101,23 +105,38 @@ export function DataTable<TData, TValue>({
     meta,
     showAiSearch,
     onAiSearch,
-    isSearching
-}: DataTableProps<TData, TValue> & { isSearching?: boolean }) {
+    isSearching,
+    isAiMode: externalAiMode,
+    onAiModeChange,
+    externalSearchValue,
+    onSearchValueChange
+}: DataTableProps<TData, TValue> & {
+    isSearching?: boolean;
+    isAiMode?: boolean;
+    onAiModeChange?: (val: boolean) => void;
+    externalSearchValue?: string;
+    onSearchValueChange?: (val: string) => void;
+}) {
     const [sorting, setSorting] = React.useState<SortingState>([])
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = React.useState({})
-    const [isAiMode, setIsAiMode] = React.useState(false)
+    const [internalAiMode, setInternalAiMode] = React.useState(false)
+
+    const isAiMode = externalAiMode ?? internalAiMode;
+    const setIsAiMode = onAiModeChange ?? setInternalAiMode;
 
     // Local state for input to allow "AI Mode" to ignore table filters while keeping text
     const [searchValue, setSearchValue] = React.useState("")
 
     const tableState = React.useMemo(() => ({
         sorting,
-        columnFilters: isAiMode ? [] : columnFilters,
+        // If we have external search or AI mode, we disable local column filters 
+        // because we are doing server-side filtering
+        columnFilters: (isAiMode || externalSearchValue) ? [] : columnFilters,
         columnVisibility,
         rowSelection,
-    }), [sorting, columnFilters, isAiMode, columnVisibility, rowSelection]);
+    }), [sorting, columnFilters, isAiMode, externalSearchValue, columnVisibility, rowSelection]);
 
     const table = useReactTable({
         data,
@@ -170,6 +189,7 @@ export function DataTable<TData, TValue>({
                                 onChange={(event) => {
                                     const val = event.target.value
                                     setSearchValue(val)
+                                    onSearchValueChange?.(val)
 
                                     // If we were in AI mode and user changed text, exit AI mode and reset data
                                     if (isAiMode) {
@@ -180,7 +200,9 @@ export function DataTable<TData, TValue>({
                                         onAiSearch?.("")
                                     }
 
-                                    table.getColumn(filterColumn)?.setFilterValue(val)
+                                    if (!onSearchValueChange) {
+                                        table.getColumn(filterColumn)?.setFilterValue(val)
+                                    }
                                 }}
                                 className={cn(
                                     "pl-9 transition-all duration-200 w-full",

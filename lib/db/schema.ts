@@ -266,6 +266,7 @@ export const works = pgTable('works', {
   index('works_tenant_status_idx').on(table.tenantId).where(sql`deleted_at IS NULL AND status = 'active'`),
   index('works_sort_order_idx').on(table.sortOrder),
   uniqueIndex('idx_works_code_tenant_unique').on(table.tenantId, table.code),
+  index('works_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
 ]);
 
 // ═══════════════════════════════════════════════════════════════
@@ -304,6 +305,8 @@ export const materials = pgTable('materials', {
 }, (table) => [
   index('materials_tenant_status_idx').on(table.tenantId).where(sql`deleted_at IS NULL AND status = 'active'`),
   uniqueIndex('idx_materials_code_tenant_unique').on(table.tenantId, table.code),
+  index('materials_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),
+  index('materials_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
 ]);
 
 // ═══════════════════════════════════════════════════════════════

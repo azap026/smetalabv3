@@ -48,6 +48,7 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
     const [isDeletingAll, startDeleteAllTransition] = useTransition();
     const [isAiSearching, startAiSearchTransition] = useTransition();
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isAiMode, setIsAiMode] = useState(false);
     const [mounted, setMounted] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,30 +59,34 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
     // Main data state
     const [data, setData] = useState<MaterialRow[]>(initialData);
 
+    // Simplified: we don't fetch 35k rows anymore.
+    // We update when initialData (Server Side 50 items) changes
     useEffect(() => {
         setData(initialData);
+    }, [initialData]);
 
-        // Lazy load the rest if we likely have more
-        // Or just always try to fetch fresh full list to ensure consistency and cache-busting
-        const loadRest = async () => {
-            setIsLoadingMore(true);
-            try {
-                const res = await fetchMoreMaterials();
-                if (res.success && res.data && res.data.length > initialData.length) {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Debounced Search logic for regular (non-AI) search
+    useEffect(() => {
+        // If we are in AI mode or currently fetching AI results, skip regular search
+        if (isAiMode || isAiSearching) return;
+
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchTerm.length >= 2) {
+                setIsLoadingMore(true);
+                const res = await fetchMoreMaterials(searchTerm);
+                if (res.success && res.data) {
                     setData(res.data);
                 }
-            } catch (e) {
-                console.error("Failed to load full materials", e);
-            } finally {
                 setIsLoadingMore(false);
+            } else if (searchTerm.length === 0) {
+                setData(initialData);
             }
-        };
+        }, 500); // 500ms delay
 
-        // Short timeout to let the UI paint first
-        const timer = setTimeout(loadRest, 100);
-        return () => clearTimeout(timer);
-
-    }, [initialData]);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, initialData, isAiSearching]);
 
     const handleExport = () => {
         startExportTransition(async () => {
@@ -270,10 +275,12 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
 
     const handleAiSearch = async (query: string) => {
         if (!query || query.length < 2) {
+            setIsAiMode(false);
             setData(initialData);
             return;
         }
 
+        setIsAiMode(true);
         startAiSearchTransition(async () => {
             const result = await searchMaterials(query);
             if (result.success && result.data) {
@@ -386,7 +393,11 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
                     filterPlaceholder="Поиск по наименованию..."
                     showAiSearch={true}
                     onAiSearch={handleAiSearch}
-                    isSearching={isAiSearching}
+                    isAiMode={isAiMode}
+                    onAiModeChange={setIsAiMode}
+                    isSearching={isAiSearching || isLoadingMore}
+                    externalSearchValue={searchTerm}
+                    onSearchValueChange={setSearchTerm}
                     meta={{
                         onInsertRequest,
                         onCancelInsert,

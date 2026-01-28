@@ -609,9 +609,9 @@ export async function searchWorks(query: string): Promise<{ success: boolean; da
             };
         });
 
-        // Filter out absolute noise (< 0.25 similarity) and Sort by boosted score
+        // Filter out absolute noise (< 0.20 similarity) and Sort by boosted score
         const finalData = boostedResults
-            .filter(r => (r.similarity || 0) > 0.25)
+            .filter(r => (r.similarity || 0) > 0.20)
             .sort((a, b) => b.boostedScore - a.boostedScore);
 
         console.timeEnd(`searchWorks:${query}`);

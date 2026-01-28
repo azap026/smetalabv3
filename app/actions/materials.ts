@@ -63,15 +63,12 @@ export async function generateMissingEmbeddings(): Promise<{ success: boolean; p
     }
 }
 
-export async function fetchMoreMaterials(): Promise<{ success: boolean; data?: MaterialRow[] }> {
+export async function fetchMoreMaterials(query?: string): Promise<{ success: boolean; data?: MaterialRow[] }> {
     try {
-        const materials = await getMaterials(100000); // Fetch explicit large amount or all. getMaterials logic handles no arg as all? No, I updated getMaterials to take limit.
-        // Wait, I updated getMaterials(limit?: number). If I pass nothing, limit is undefined, query returns all.
-        // But to be explicit, let's just call getMaterials().
-
+        const materials = await getMaterials(undefined, query);
         return { success: true, data: materials };
     } catch (e) {
-        console.error("Failed to fetch more materials", e);
+        console.error("Failed to fetch materials", e);
         return { success: false };
     }
 }

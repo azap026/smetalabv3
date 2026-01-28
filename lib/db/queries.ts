@@ -185,9 +185,23 @@ export async function getWorks() {
   )();
 }
 
-export async function getMaterials(limit?: number) {
+import { ilike } from 'drizzle-orm';
+
+export async function getMaterials(limit?: number, search?: string) {
   const team = await getTeamForUser();
   const teamId = team?.id;
+
+  const filters = [isNull(materials.deletedAt)];
+
+  if (teamId) {
+    filters.push(or(isNull(materials.tenantId), eq(materials.tenantId, teamId))!);
+  } else {
+    filters.push(isNull(materials.tenantId));
+  }
+
+  if (search) {
+    filters.push(ilike(materials.name, `%${search}%`));
+  }
 
   let query = db
     .select({
@@ -197,9 +211,14 @@ export async function getMaterials(limit?: number) {
       name: materials.name,
       unit: materials.unit,
       price: materials.price,
-      // category: materials.category, // Removed
-      // subcategory: materials.subcategory, // Removed
-      // shortDescription: materials.shortDescription, // Removed
+      vendor: materials.vendor,
+      weight: materials.weight,
+      categoryLv1: materials.categoryLv1,
+      categoryLv2: materials.categoryLv2,
+      categoryLv3: materials.categoryLv3,
+      categoryLv4: materials.categoryLv4,
+      productUrl: materials.productUrl,
+      imageUrl: materials.imageUrl,
       description: materials.description,
       status: materials.status,
       metadata: materials.metadata,
@@ -209,19 +228,13 @@ export async function getMaterials(limit?: number) {
       deletedAt: materials.deletedAt,
     })
     .from(materials)
-    .where(
-      and(
-        isNull(materials.deletedAt),
-        teamId
-          ? or(isNull(materials.tenantId), eq(materials.tenantId, teamId))
-          : isNull(materials.tenantId)
-      )
-    )
+    .where(and(...filters))
     .orderBy(materials.code);
 
-  if (limit) {
+  const finalLimit = limit || (search ? 500 : 1000);
+  if (finalLimit) {
     // @ts-expect-error - constructing query dynamically
-    query = query.limit(limit);
+    query = query.limit(finalLimit);
   }
 
   return await query as unknown as MaterialRow[];

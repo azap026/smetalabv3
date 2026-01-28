@@ -1,8 +1,8 @@
 
 import { db } from '@/lib/db/drizzle';
-import { materials } from '@/lib/db/schema';
+import { materials, works } from '@/lib/db/schema';
 import { generateEmbeddingsBatch } from '@/lib/ai/embeddings';
-import { buildMaterialContext } from '@/lib/ai/embedding-context';
+import { buildMaterialContext, buildWorkContext, MaterialContextInput, WorkContextInput } from '@/lib/ai/embedding-context';
 import { eq, isNull } from 'drizzle-orm';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -10,78 +10,97 @@ import path from 'path';
 // Load env vars
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-async function main() {
-    console.log('🚀 Starting offline embedding generation...');
+async function processTable(
+    table: typeof materials | typeof works,
+    tableName: 'materials' | 'works'
+) {
+    console.log(`\n🔍 Checking ${tableName}...`);
 
-    if (!process.env.OPENAI_API_KEY) {
-        console.error('❌ CRITICAL: OPENAI_API_KEY is not defined in environment variables. Exiting.');
-        process.exit(1);
-    }
-
-    // 1. Get user/team context (Optional: or just process ALL missing embeddings globally?)
-    // For safety, let's process ALL missing embeddings in the DB since this is an admin script.
-
-    const BATCH_SIZE = 50; // Larger batch size for local script
+    const BATCH_SIZE = 500;
     let totalProcessed = 0;
-    let consecutiveErrors = 0;
-    const MAX_CONSECUTIVE_ERRORS = 3;
+
+    // Determine target columns explicitly to satisfy TypeScript
+    const embeddingCol = tableName === 'materials' ? materials.embedding : works.embedding;
 
     while (true) {
-        // Fetch batch
-        const batch = await db
-            .select()
-            .from(materials)
-            .where(isNull(materials.embedding))
+        // Query missing embeddings using the determined column
+        const batch = await db.select().from(table)
+            .where(isNull(embeddingCol))
             .limit(BATCH_SIZE);
 
         if (batch.length === 0) {
-            console.log('✅ No more items to process.');
+            console.log(`✅ No more ${tableName} to process.`);
             break;
         }
 
-        console.log(`📦 Processing batch of ${batch.length} items...`);
+        console.log(`📦 [${tableName}] Processing batch of ${batch.length} items...`);
 
-        // Prepare texts
-        const texts = batch.map(m => buildMaterialContext(m));
+        // Prepare context strings based on table type
+        const texts = batch.map(item => {
+            if (tableName === 'materials') {
+                return buildMaterialContext(item as unknown as MaterialContextInput);
+            } else {
+                return buildWorkContext(item as unknown as WorkContextInput);
+            }
+        });
 
-        // Generate embeddings
+        // Generate embeddings via OpenAI
         const embeddings = await generateEmbeddingsBatch(texts);
 
         if (!embeddings || embeddings.length !== batch.length) {
-            consecutiveErrors++;
-            console.error(`❌ Error generating embeddings for batch (Attempt ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}). Retrying in 5s...`);
+            console.error(`❌ Error generating embeddings for ${tableName} batch. Skipping batch to avoid infinite loop.`);
+            break;
+        }
 
-            if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                console.error('❌ Too many consecutive errors. Aborting script.');
-                process.exit(1);
+        // Update records in parallel for speed
+        await Promise.all(batch.map(async (item, i) => {
+            // We cast item to any only for the ID access since we know both tables have 'id'
+            // and we use the original table objects to ensure type safety for columns
+            const itemId = (item as { id: string }).id;
+
+            if (tableName === 'materials') {
+                await db.update(materials)
+                    .set({ embedding: embeddings[i], updatedAt: new Date() })
+                    .where(eq(materials.id, itemId));
+            } else {
+                await db.update(works)
+                    .set({ embedding: embeddings[i], updatedAt: new Date() })
+                    .where(eq(works.id, itemId));
             }
-
-            await new Promise(r => setTimeout(r, 5000));
-            continue;
-        }
-
-        // Reset error counter on success
-        consecutiveErrors = 0;
-
-        // Update DB (Parallel is fine here as script is single-thread dominant and we want speed, 
-        // but sequential is safer for connection pool. Let's do Promise.all with some concurrency control if needed, 
-        // or just sequential since we have time).
-        // Let's us sequential to be super safe against "CONNECTION_CLOSED".
-
-        for (let i = 0; i < batch.length; i++) {
-            await db.update(materials)
-                .set({ embedding: embeddings[i], updatedAt: new Date() })
-                .where(eq(materials.id, batch[i].id));
-        }
+        }));
 
         totalProcessed += batch.length;
-        console.log(`✨ Processed ${totalProcessed} items so far.`);
+        console.log(`✨ [${tableName}] Processed ${totalProcessed} items so far.`);
 
-        // Small delay to be nice to API limits
-        await new Promise(r => setTimeout(r, 500));
+        // Delay to respect rate limits (OpenAI TPM/RPM)
+        await new Promise(r => setTimeout(r, 1000));
+    }
+}
+
+async function main() {
+    console.log('🚀 Starting AI Embedding Generation...');
+
+    if (!process.env.OPENAI_API_KEY) {
+        console.error('❌ CRITICAL: OPENAI_API_KEY is not defined. Exiting.');
+        process.exit(1);
     }
 
-    console.log('🎉 Done! All materials processed.');
+    const force = process.argv.includes('--force');
+    if (force) {
+        console.log('⚠️  FORCE MODE: Regenerating ALL embeddings (this will consume credits).');
+        console.log('🧹 Clearing existing embeddings to prepare for full refresh...');
+
+        // Clear embeddings for both tables
+        await db.update(materials).set({ embedding: null });
+        await db.update(works).set({ embedding: null });
+
+        console.log('✨ Embeddings cleared. Starting fresh generation...');
+    }
+
+    await processTable(materials, 'materials');
+    await processTable(works, 'works');
+
+    console.log('\n🎉 Done! All materials and works processed.');
     process.exit(0);
 }
 

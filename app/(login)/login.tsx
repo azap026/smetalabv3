@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CircleIcon, Loader2 } from 'lucide-react';
+import { CircleIcon, Loader2, Eye, EyeOff } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 
@@ -27,6 +27,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-gray-50 px-4">
@@ -85,19 +86,34 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete={
-                  mode === 'signin' ? 'current-password' : 'new-password'
-                }
-                defaultValue={state?.password}
-                required
-                minLength={8}
-                maxLength={100}
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={
+                    mode === 'signin' ? 'current-password' : 'new-password'
+                  }
+                  defaultValue={state?.password}
+                  required
+                  minLength={8}
+                  maxLength={100}
+                  placeholder="Enter your password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 rounded-sm"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {mode === 'signup' && !inviteId && (
@@ -115,7 +131,9 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
             )}
 
             {state?.error && (
-              <div className="text-red-500 text-sm">{state?.error}</div>
+              <div className="text-red-500 text-sm" role="alert" aria-live="polite">
+                {state?.error}
+              </div>
             )}
 
             <Button

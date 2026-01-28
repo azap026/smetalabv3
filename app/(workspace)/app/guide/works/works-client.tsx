@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
-import { importWorks, exportWorks, deleteAllWorks, insertWorkAfter, searchWorks } from '@/app/actions/works';
+import { importWorks, exportWorks, deleteAllWorks, insertWorkAfter, searchWorks, reorderWorks } from '@/app/actions/works';
 import * as XLSX from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -249,6 +249,20 @@ export function WorksClient({ initialData }: WorksClientProps) {
     };
 
 
+    // Sorting reset
+    const [isReordering, startReorderTransition] = useTransition();
+
+    const handleReorder = () => {
+        startReorderTransition(async () => {
+            const result = await reorderWorks();
+            if (result.success) {
+                toast({ title: "Сортировка сброшена", description: "Порядок записей успешно обновлен." });
+            } else {
+                toast({ variant: "destructive", title: "Ошибка", description: result.message });
+            }
+        });
+    };
+
     const handleAiSearch = async (query: string) => {
         if (!query || query.length < 2) {
             setData(initialData);
@@ -405,7 +419,8 @@ export function WorksClient({ initialData }: WorksClientProps) {
                         onInsertRequest,
                         onCancelInsert,
                         onSaveInsert,
-                        updatePlaceholderRow
+                        updatePlaceholderRow,
+                        onReorder: handleReorder
                     }}
                 />
             </div>

@@ -35,6 +35,7 @@ export interface TableMeta<TData> {
     onCancelInsert?: () => void
     onSaveInsert?: (id: string) => void
     updatePlaceholderRow?: (id: string, data: Partial<TData>) => void
+    onReorder?: () => void
 }
 
 interface DataTableProps<TData, TValue> {

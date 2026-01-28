@@ -448,7 +448,18 @@ export const columns: ColumnDef<WorkRow>[] = [
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
-                    <Settings className="h-4 w-4 opacity-50" />
+                    <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 opacity-50 hover:opacity-100">
+                                <Settings className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => meta.onReorder?.()}>
+                                Сбросить сортировку
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             )
         },

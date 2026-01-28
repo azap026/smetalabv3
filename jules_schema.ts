@@ -11,7 +11,6 @@ import {
   index,
   customType,
   jsonb,
-  doublePrecision,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
@@ -224,12 +223,6 @@ export const vector = customType<{
   dataType(config) {
     return `vector(${config?.dimensions})`;
   },
-  toDriver(value: number[]) {
-    return JSON.stringify(value);
-  },
-  fromDriver(value: unknown) {
-    return JSON.parse(value as string);
-  },
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -247,17 +240,14 @@ export const works = pgTable('works', {
   shortDescription: text('short_description'),
   description: text('description'),
 
-  phase: text('phase'),
   category: text('category'),
   subcategory: text('subcategory'),
   tags: text('tags').array(), // pgCore text array
 
-  sortOrder: doublePrecision('sort_order').notNull().default(0),
-
   status: workStatusEnum('status').notNull().default('draft'),
   metadata: jsonb('metadata').default({}),
 
-  embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small uses 1536 dimensions
+  // embedding: vector('embedding', { dimensions: 1024 }),
   // search_vector: customType<{ data: string }>({ dataType() { return 'tsvector'; } })('search_vector'),
 
   deletedAt: timestamp('deleted_at'),
@@ -265,49 +255,7 @@ export const works = pgTable('works', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => [
   index('works_tenant_status_idx').on(table.tenantId).where(sql`deleted_at IS NULL AND status = 'active'`),
-  index('works_sort_order_idx').on(table.sortOrder),
-  uniqueIndex('idx_works_code_tenant_unique').on(table.tenantId, table.code),
-  index('works_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
-]);
-
-// ═══════════════════════════════════════════════════════════════
-// MATERIALS (Guide)
-// ═══════════════════════════════════════════════════════════════
-
-export const materials = pgTable('materials', {
-  id: text('id').default(sql`gen_random_uuid()`).primaryKey(),
-  tenantId: integer('tenant_id').references(() => teams.id),
-
-  code: varchar('code', { length: 64 }).notNull(),
-  name: text('name').notNull(),
-  unit: varchar('unit', { length: 20 }),
-  price: integer('price'),
-  vendor: text('vendor'),
-  weight: text('weight'),
-  categoryLv1: text('category_lv1'),
-  categoryLv2: text('category_lv2'),
-  categoryLv3: text('category_lv3'),
-  categoryLv4: text('category_lv4'),
-  productUrl: text('product_url'),
-  imageUrl: text('image_url'),
-
-  description: text('description'),
-
-  tags: text('tags').array(),
-
-  status: workStatusEnum('status').notNull().default('draft'),
-  metadata: jsonb('metadata').default({}),
-
-  embedding: vector('embedding', { dimensions: 1536 }),
-
-  deletedAt: timestamp('deleted_at'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-}, (table) => [
-  index('materials_tenant_status_idx').on(table.tenantId).where(sql`deleted_at IS NULL AND status = 'active'`),
-  uniqueIndex('idx_materials_code_tenant_unique').on(table.tenantId, table.code),
-  index('materials_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),
-  index('materials_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
+  index('works_code_tenant_idx').on(table.tenantId, table.code).where(sql`deleted_at IS NULL`),
 ]);
 
 // ═══════════════════════════════════════════════════════════════
@@ -320,8 +268,6 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   invitations: many(invitations),
   estimateShares: many(estimateShares),
   impersonationSessions: many(impersonationSessions),
-  works: many(works),
-  materials: many(materials),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -424,13 +370,6 @@ export const worksRelations = relations(works, ({ one }) => ({
   }),
 }));
 
-export const materialsRelations = relations(materials, ({ one }) => ({
-  tenant: one(teams, {
-    fields: [materials.tenantId],
-    references: [teams.id],
-  }),
-}));
-
 // ═══════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════
@@ -455,8 +394,6 @@ export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type Work = typeof works.$inferSelect;
 export type NewWork = typeof works.$inferInsert;
-export type Material = typeof materials.$inferSelect;
-export type NewMaterial = typeof materials.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {

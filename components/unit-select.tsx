@@ -34,7 +34,11 @@ export function UnitSelect({ value, onChange, placeholder = "Ед. изм...", c
 
     React.useEffect(() => {
         if (open) {
-            getUniqueUnits().then(setUnits)
+            getUniqueUnits().then(res => {
+                if (res.success) {
+                    setUnits(res.data);
+                }
+            })
         }
     }, [open])
 

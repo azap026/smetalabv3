@@ -1,30 +1,43 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, permissions, type NewUser, type NewTeam } from '@/lib/db/schema';
 import { hasPermission } from '@/lib/auth/rbac';
-import { sql } from 'drizzle-orm';
+import { sql, eq } from 'drizzle-orm';
 
-const testAdmin: NewUser = { id: 8888, name: 'Super Admin', email: 'super@test.com', platformRole: 'superadmin', passwordHash: 'hash' };
-const testTeam: NewTeam = { id: 8888, name: 'Test Team 8888' };
-const permCode = 'test.perm.8888';
+const permCode = 'test.perm.7777';
 
 describe('RBAC Security Regression', () => {
-    beforeEach(async () => {
-        // cleanup
-        await db.execute(sql`DELETE FROM users WHERE id = ${testAdmin.id}`);
-        await db.execute(sql`DELETE FROM teams WHERE id = ${testTeam.id}`);
-        await db.execute(sql`DELETE FROM permissions WHERE code = ${permCode}`);
+    let testAdminId: number;
+    let testTeamId: number;
 
+    beforeEach(async () => {
         // setup
-        await db.insert(users).values(testAdmin);
-        await db.insert(teams).values(testTeam);
-        await db.insert(permissions).values({ code: permCode, name: 'P', scope: 'tenant' });
+        const [user] = await db.insert(users).values({
+            name: 'Super Admin',
+            email: `super-${Date.now()}@test.com`,
+            platformRole: 'superadmin',
+            passwordHash: 'hash'
+        }).returning();
+        testAdminId = user.id;
+
+        const [team] = await db.insert(teams).values({
+            name: `Test Team ${Date.now()}`
+        }).returning();
+        testTeamId = team.id;
+
+        await db.insert(permissions).values({ code: permCode, name: 'P', scope: 'tenant' }).onConflictDoNothing();
+    });
+
+    afterEach(async () => {
+        await db.delete(permissions).where(eq(permissions.code, permCode));
+        if (testTeamId) await db.delete(teams).where(eq(teams.id, testTeamId));
+        if (testAdminId) await db.delete(users).where(eq(users.id, testAdminId));
     });
 
     it('should NOT grant access to superadmin with INVALID impersonation session', async () => {
         const authorized = await hasPermission(
-            testAdmin.id as number,
-            testTeam.id as number,
+            testAdminId,
+            testTeamId,
             permCode,
             'read',
             { impersonationSessionId: 'invalid-token' }

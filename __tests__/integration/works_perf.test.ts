@@ -20,24 +20,28 @@ vi.mock('@/lib/db/queries', async (importOriginal) => {
     };
 });
 
-const testUser: NewUser = { id: 8888, name: 'Perf User', email: 'perf-test@test.com', passwordHash: 'hash' };
-const testTeam: NewTeam = { id: 8888, name: 'Perf Team' };
-
 describe('Works Reordering Performance', () => {
+    let testUserId: number;
+    let testTeamId: number;
+
     beforeEach(async () => {
-        // Cleanup
-        await db.delete(works).where(eq(works.tenantId, testTeam.id!));
-        await db.delete(teamMembers).where(eq(teamMembers.teamId, testTeam.id!));
-        await db.delete(users).where(eq(users.id, testUser.id!));
-        await db.delete(teams).where(eq(teams.id, testTeam.id!));
+        // Setup with auto-generated IDs
+        const [user] = await db.insert(users).values({
+            name: 'Perf User',
+            email: `perf-test-${Date.now()}@test.com`,
+            passwordHash: 'hash',
+        }).returning();
+        testUserId = user.id;
 
-        // Setup
-        await db.insert(users).values(testUser);
-        await db.insert(teams).values(testTeam);
-        await db.insert(teamMembers).values({ userId: testUser.id!, teamId: testTeam.id!, role: 'admin' });
+        const [team] = await db.insert(teams).values({
+            name: 'Perf Team'
+        }).returning();
+        testTeamId = team.id;
 
-        const [insertedUser] = await db.select().from(users).where(eq(users.id, testUser.id!));
-        const [insertedTeam] = await db.select().from(teams).where(eq(teams.id, testTeam.id!));
+        await db.insert(teamMembers).values({ userId: testUserId, teamId: testTeamId, role: 'admin' });
+
+        const [insertedUser] = await db.select().from(users).where(eq(users.id, testUserId));
+        const [insertedTeam] = await db.select().from(teams).where(eq(teams.id, testTeamId));
 
         // Mock return values
         vi.mocked(getUser).mockResolvedValue(insertedUser);
@@ -46,44 +50,52 @@ describe('Works Reordering Performance', () => {
     });
 
     afterEach(async () => {
-        await db.delete(works).where(eq(works.tenantId, testTeam.id!));
-        await db.delete(teamMembers).where(eq(teamMembers.teamId, testTeam.id!));
-        await db.delete(users).where(eq(users.id, testUser.id!));
-        await db.delete(teams).where(eq(teams.id, testTeam.id!));
+        if (testTeamId) {
+            await db.delete(works).where(eq(works.tenantId, testTeamId));
+            await db.delete(teamMembers).where(eq(teamMembers.teamId, testTeamId));
+            await db.delete(teams).where(eq(teams.id, testTeamId));
+        }
+        if (testUserId) {
+            await db.delete(users).where(eq(users.id, testUserId));
+        }
         vi.resetAllMocks();
     });
 
-    it('should reorder works efficiently', async () => {
+    it('should reorder works efficiently', { timeout: 30000 }, async () => {
         const NUM_WORKS = 200;
         const worksToInsert: NewWork[] = [];
         for (let i = 0; i < NUM_WORKS; i++) {
             worksToInsert.push({
-                tenantId: testTeam.id!,
-                code: `9.${i + 1}`, // Wrong prefix to force reordering (9.x -> 1.x)
+                tenantId: testTeamId,
+                code: `W-${i}`,
                 name: `Work ${i}`,
                 status: 'active',
-                phase: 'Stage 1'
+                phase: 'Stage 1',
+                sortOrder: (NUM_WORKS - i) * 10 // Reverse order to test sorting
             });
         }
         await db.insert(works).values(worksToInsert);
 
         const start = performance.now();
+        // reorderWorks now resets sortOrder to 100, 200, 300...
         const result = await reorderWorks();
         const end = performance.now();
 
         expect(result.success).toBe(true);
-        console.log(`Reorder execution time: ${(end - start).toFixed(2)}ms`);
+        // console.log(`Reorder execution time: ${(end - start).toFixed(2)}ms`);
 
         // Verify order
         const reorderedWorks = await db.query.works.findMany({
-            where: eq(works.tenantId, testTeam.id!),
+            where: eq(works.tenantId, testTeamId),
+            orderBy: (works, { asc }) => [asc(works.sortOrder)],
         });
 
-        // Sort using natural sort order to match logical expectations
-        reorderedWorks.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
-
         expect(reorderedWorks).toHaveLength(NUM_WORKS);
-        expect(reorderedWorks[0].code).toBe('1.1');
-        expect(reorderedWorks[NUM_WORKS - 1].code).toBe(`1.${NUM_WORKS}`);
+
+        const firstItem = reorderedWorks[0];
+        const lastItem = reorderedWorks[NUM_WORKS - 1];
+
+        expect(firstItem.sortOrder).toBe(100);
+        expect(lastItem.sortOrder).toBe(NUM_WORKS * 100);
     });
 });

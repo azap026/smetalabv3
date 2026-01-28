@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication & Basic Navigation', () => {
-    test('should redirect root to sign-in', async ({ page }) => {
+    test('should load landing page on root', async ({ page }) => {
         await page.goto('/');
-        await expect(page).toHaveURL(/.*sign-in/);
-        await expect(page.getByRole('button', { name: /Sign in/i })).toBeVisible();
+        await expect(page).toHaveURL('/');
+        // Use a more specific selector (e.g., the logo in the header or the main heading)
+        await expect(page.locator('header').getByText('Smetalab')).toBeVisible();
+        await expect(page.getByRole('link', { name: /Войти/i })).toBeVisible();
     });
 
     test('should redirect unauthenticated user to sign-in from dashboard', async ({ page }) => {

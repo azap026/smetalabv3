@@ -15,7 +15,7 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
 import { importWorks, exportWorks, deleteAllWorks, insertWorkAfter, searchWorks } from '@/app/actions/works';
-import * as xlsx from 'xlsx';
+import * as XLSX from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
 import {
     AlertDialog,
@@ -64,11 +64,11 @@ export function WorksClient({ initialData }: WorksClientProps) {
     const handleExport = () => {
         startExportTransition(async () => {
             const result = await exportWorks();
-            if (result.success && result.data) {
-                const worksheet = xlsx.utils.json_to_sheet(result.data);
-                const workbook = xlsx.utils.book_new();
-                xlsx.utils.book_append_sheet(workbook, worksheet, 'Works');
-                xlsx.writeFile(workbook, 'works_export.xlsx');
+            if (result.success) {
+                const worksheet = XLSX.utils.json_to_sheet(result.data);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Works');
+                XLSX.writeFile(workbook, 'works_export.xlsx');
                 toast({
                     title: "Экспорт успешен",
                     description: "Данные работ были успешно экспортированы.",
@@ -77,7 +77,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
                 toast({
                     variant: "destructive",
                     title: "Ошибка экспорта",
-                    description: result.message || "Не удалось экспортировать данные.",
+                    description: result.message,
                 });
             }
         });
@@ -120,6 +120,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
                     title: "Справочник очищен",
                     description: result.message,
                 });
+                setData([]);
             } else {
                 toast({
                     variant: "destructive",
@@ -159,7 +160,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
                 tags: null,
                 metadata: {},
                 embedding: null,
-                sortOrder: null,
+                sortOrder: 0,
                 isPlaceholder: true
             };
             setData([...data, placeholder]);
@@ -188,7 +189,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
             tags: null,
             metadata: {},
             embedding: null,
-            sortOrder: null,
+            sortOrder: 0,
             isPlaceholder: true
         };
 
@@ -262,9 +263,8 @@ export function WorksClient({ initialData }: WorksClientProps) {
         startAiSearchTransition(async () => {
             console.log(`Starting client-side search for: ${query}`);
             const result = await searchWorks(query);
-            console.log(`Search result for ${query}:`, result.success, result.data?.length);
 
-            if (result.success && result.data) {
+            if (result.success) {
                 setData(result.data as WorkRow[]);
                 toast({
                     title: "Найдено",

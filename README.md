@@ -1,235 +1,97 @@
 # Smetalab v1.0.2
 
-A SaaS application built with **Next.js**, featuring authentication, Stripe payment integration, and team management dashboard.
+Профессиональная SaaS-платформа на **Next.js**, с продвинутой мультиарендностью, гибридным AI-поиском и системой управления командой.
 
-**Repository: [https://github.com/azap026/smetalabv3](https://github.com/azap026/smetalabv3)**
+**Репозиторий: [https://github.com/azap026/smetalabv3](https://github.com/azap026/smetalabv3)**
 
-## Features
+---
 
-- Marketing landing page (`/`) with animated Terminal element
-- Pricing page (`/pricing`) which connects to Stripe Checkout
-- Dashboard pages with CRUD operations on users/teams
-- **Advanced RBAC (Role-Based Access Control)** with platform and tenant roles
-- Subscription management with Stripe Customer Portal
-- Email/password authentication with JWTs stored to cookies
-- Global middleware to protect logged-in routes
-- Local middleware to protect Server Actions or validate Zod schemas
-- **Advanced Directories (Guides)**: Multitenant database for Works and Materials with hybrid search support
-- Admin dashboard with permissions matrix UI
+## 🏛 Архитектура и Правила Разработки (Важно!)
 
-## Role-Based Access Control (RBAC)
+Этот раздел описывает новый стандарт кода после рефакторинга. Пожалуйста, следуйте этим правилам, чтобы проект оставался чистым и надежным.
 
-### Role Types
+### 1. Безопасность и Multi-tenancy (Слой БД)
+**Проблема:** Опасно вручную прописывать `where(eq(table.tenantId, ...))` в каждом запросе. Можно забыть и «слить» данные другой команде.
 
-**Platform Roles** (for platform-level access):
-| Role | Description |
-|------|-------------|
-| `superadmin` | Full platform access, can impersonate tenants |
-| `support` | Limited platform access for customer support |
+**Решение:** Использовать хелпер `withActiveTenant` из `lib/db/queries.ts`.
+- ✅ **Как НУЖНО:**
+  ```typescript
+  // Хелпер автоматически добавит: .where(and(eq(tenantId, ...), isNull(deletedAt)))
+  const data = await db.select().from(materials).where(withActiveTenant(materials, teamId));
+  ```
+- ❌ **Как НЕЛЬЗЯ:**
+  ```typescript
+  // Не пишите фильтры вручную, если есть tenantId и deletedAt
+  .where(and(eq(materials.tenantId, id), isNull(materials.deletedAt))) 
+  ```
 
-**Tenant Roles** (for team-level access):
-| Role | Description |
-|------|-------------|
-| `admin` | Full team access, can manage members and billing |
-| `estimator` | Create and edit estimates, view projects |
-| `manager` | Manage materials and purchases, view-only estimates |
+### 2. Целостность данных и Транзакции (Слой Сервисов)
+**Проблема:** Если при импорте 100 строк на 50-й произойдет ошибка, в базе останется «мусор» (половина данных).
 
-### Usage
+**Решение:** Все массовые операции или сложные цепочки записей должны быть в **транзакции**.
+- ✅ **Как НУЖНО:**
+  ```typescript
+  await db.transaction(async (tx) => {
+    // Если здесь упадет ошибка, все изменения внутри tx откатятся назад
+    await tx.insert(materials).values(rows);
+    await tx.insert(logs).values(logEntry);
+  });
+  ```
+- ⚠️ **Правило:** Бизнес-логика живет в `lib/services/`. Server Actions лишь вызывают эти сервисы.
 
-**Server-side (API routes, Server Components):**
+### 3. Чистый Фронтенд (Декомпозиция)
+**Проблема:** Файлы по 500 строк сложнее читать и тестировать.
+
+**Решение:** Разделяйте код на 3 уровня:
+1.  **Хуки (hooks/):** Вся «черная работа» — запросы к API, стейты, таймеры.
+2.  **Компоненты (components/):** Только UI (кнопки, таблицы, верстка). Они получают данные через props.
+3.  **Контейнер (client.tsx):** Собирает хуки и компоненты вместе.
+
+> **Совет:** Если в компоненте больше 2-3 `useState` или сложные `useEffect` — выносите это в кастомный хук.
+
+### 4. Обработка ошибок
+Не возвращайте просто `null` или строки. Используйте объект `Result` из `lib/utils/result.ts`.
 ```typescript
-import { checkAccess, isSuperadmin } from '@/lib/auth/access';
-
-// Check specific permission
-const { authorized } = await checkAccess('estimates.create', tenantId);
-
-// Check if superadmin
-if (await isSuperadmin()) { /* ... */ }
+if (!success) return { success: false, message: "Ошибка", code: "DATA_INVALID" };
 ```
 
-**Client-side (React components):**
-```typescript
-import { usePermissions } from '@/hooks/use-permissions';
+---
 
-function MyComponent() {
-  const { hasPermission, loading } = usePermissions();
-  
-  if (hasPermission('estimates.create')) {
-    return <CreateButton />;
-  }
-}
-```
+### 🏆 Золотые правила (чек-лист на завтра)
+1. **Нужно добавить запрос в БД?** -> Проверь, есть ли там `tenantId`. Если да — используй `withActiveTenant`.
+2. **Нужно изменить данные (Insert/Update)?** -> Делай это в `lib/services/` и обязательно внутри `db.transaction`.
+3. **Нужно добавить кнопку или поле на страницу?** -> Посмотри, можно ли вынести логику в хук. Не раздувай `.tsx` страницы.
+4. **Добавил новую фичу?** -> Запусти `pnpm type-check`. Если видишь `any` — исправляй.
 
-### Seeding Permissions
+---
+
+## 📂 Структура Проекта
+
+- `app/(workspace)/app/`: Основные страницы рабочего пространства.
+- `app/actions/`: Server Actions (обертки `safeAction` с проверкой ролей).
+- `lib/db/`: Схема Drizzle и миграции.
+- `lib/services/`: **Ядро системы**. Обработка данных, транзакции, API OpenAI.
+- `lib/auth/`: Логика RBAC и контроля доступа.
+- `components/ui/`: Библиотека Shadcn/UI (базовые блоки).
+
+## 🛠 Технологии
+
+- **Framework**: Next.js 14+ (App Router)
+- **Database**: Postgres (Neon/Render) + Drizzle ORM
+- **AI**: OpenAI (модель `text-embedding-3-small`) для умного поиска.
+- **UI**: Tailwind CSS + Shadcn/UI.
+
+## 🚦 Быстрый Старт
+
+1. `pnpm install` — установка зависимостей.
+2. `cp .env.example .env` — настройка переменных (Postgres, OpenAI, Stripe).
+3. `pnpm db:migrate` — накат схемы на БД.
+4. `pnpm dev` — запуск сервера.
+
+## 🧪 Команды проверки
 
 ```bash
-# Seed permissions and role mappings
-pnpm db:seed:permissions
+pnpm type-check    # Проверка типов (обязательно перед коммитом)
+pnpm lint          # Проверка стиля кода
+pnpm test          # Юнит-тесты
 ```
-
-## Tech Stack
-
-- **Framework**: [Next.js](https://nextjs.org/)
-- **Database**: [Postgres](https://www.postgresql.org/)
-- **ORM**: [Drizzle](https://orm.drizzle.team/)
-- **Payments**: [Stripe](https://stripe.com/)
-- **UI Library**: [shadcn/ui](https://ui.shadcn.com/)
-
-## Getting Started
-
-```bash
-git clone https://github.com/azap026/smetalabv3
-cd "Smetalab v1.0.2"
-pnpm install
-```
-
-## Environment Setup
-
-Create a `.env` file based on `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-Fill in the required values:
-
-- `POSTGRES_URL`: Your Render Postgres connection string (Frankfurt region)
-- `BASE_URL`: `http://localhost:3000` for local dev
-- `AUTH_SECRET`: Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
-- `STRIPE_SECRET_KEY`: From [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys)
-- `STRIPE_WEBHOOK_SECRET`: Generated by Stripe CLI (see below)
-- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: From [Stripe Dashboard](https://dashboard.stripe.com/test/apikeys)
-
-## Running Locally
-
-### 1. Install Stripe CLI
-
-Download Stripe CLI for local development:
-
-```bash
-# Using Chocolatey (Windows)
-choco install stripe-cli
-
-# Or download manually from: https://docs.stripe.com/stripe-cli
-```
-
-Login to Stripe:
-
-```bash
-stripe login
-```
-
-### 2. Setup Database
-
-Push the schema to your database:
-
-```bash
-pnpm db:migrate
-```
-
-Optionally seed with test data:
-
-```bash
-pnpm db:seed
-```
-
-Default user credentials:
-- Email: `test@test.com`
-- Password: `admin123`
-
-### 3. Start the development server
-
-```bash
-pnpm dev
-```
-
-### 4. Listen for Stripe webhooks
-
-In a separate terminal, start the Stripe webhook listener:
-
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
-
-Copy the webhook signing secret (`whsec_...`) and add it to your `.env` as `STRIPE_WEBHOOK_SECRET`.
-
-Open [http://localhost:3000](http://localhost:3000) to view the application.
-
-## Testing
-
-The project has a comprehensive testing suite:
-
-### 1. Unit & Integration Tests (Vitest)
-```bash
-pnpm test
-```
-Located in `__tests__/unit` and `__tests__/integration`.
-
-### 2. End-to-End Tests (Playwright)
-```bash
-# Setup browsers (first time)
-npx playwright install --with-deps chromium
-
-# Run tests
-pnpm test:e2e
-```
-Located in `__tests__/e2e`. These tests run against a production build in CI.
-
-### 3. Type Checking
-```bash
-pnpm type-check
-```
-
-## Testing Payments
-
-To test Stripe payments, use the following test card details:
-
-- Card Number: `4242 4242 4242 4242`
-- Expiration: Any future date
-- CVC: Any 3-digit number
-
-### CI/CD with GitHub Actions
-
-This project uses a strict CI/CD pipeline via GitHub Actions to ensure only tested code reaches production:
-
-1. **CI Phase**: Runs on every Push/PR.
-   - **Lint & Type Check**: `pnpm lint` and `pnpm type-check`.
-   - **Database Setup**: Migrations and Seeding.
-   - **Vitest**: Unit and Integration tests.
-   - **Playwright**: E2E tests against a production build.
-   - **Build**: Verifies that the app builds correctly.
-2. **CD Phase**: Runs ONLY on the `main` branch AFTER the CI phase succeeds. It performs production database migrations and triggers Render deployment.
-
-### Setting up Deployment to Render (Frankfurt Region)
-
-1. **Disable Auto Deploy on Render**: In your Render Web Service settings, set **Auto Deploy** to **No**. This prevents Render from deploying untested code as soon as you push.
-2. **GitHub Secrets**: Add the following secrets to your GitHub repository (`Settings > Secrets and variables > Actions`):
-   - `RENDER_DEPLOY_HOOK_URL`: The "Deploy Hook" URL from your Render service dashboard.
-   - `POSTGRES_URL`: Production DB connection string (used for migrations during deploy).
-   - `STRIPE_SECRET_KEY`, `AUTH_SECRET`, etc.
-
-### Production Environment Variables on Render
-Configure these in the Render Dashboard:
-- `BASE_URL`: `https://smeta-lab.ru`
-- `NODE_VERSION`: `20`
-- `PNPM_VERSION`: `latest` (or specific version)
-- `POSTGRES_URL`: Your Frankfurt-based Postgres DB.
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `AUTH_SECRET`, `RESEND_API_KEY`.
-
-## Other Templates
-
-While this template is intentionally minimal and to be used as a learning resource, there are other paid versions in the community which are more full-featured:
-
-- https://achromatic.dev
-- https://shipfa.st
-- https://makerkit.dev
-- https://zerotoshipped.com
-- https://turbostarter.dev
-
-## Google Jules Integration
-
-This project is configured to work with **Google Jules**, an autonomous AI coding agent.
-
-- **Instructions**: See `AGENTS.md` for project rules and context.
-- **Setup**: Jules uses `.jules/setup.sh` to prepare its environment.
-- **Connection**: To connect Jules to this project, visit [jules.google.com](https://jules.google.com) and link your GitHub repository.

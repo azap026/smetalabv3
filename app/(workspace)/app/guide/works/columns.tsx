@@ -208,16 +208,7 @@ const RowActions = ({ row, table }: { row: { original: WorkRow }, table: Table<W
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleUpdate} className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="code" className="text-right">Код</Label>
-                                <Input
-                                    id="code"
-                                    value={formData.code}
-                                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                    className="col-span-3 h-8 text-sm"
-                                    required
-                                />
-                            </div>
+
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="name" className="text-right">Название</Label>
                                 <Input
@@ -315,15 +306,18 @@ const RowActions = ({ row, table }: { row: { original: WorkRow }, table: Table<W
 
 export const columns: ColumnDef<WorkRow>[] = [
     {
-        accessorKey: "code",
-        header: "Код",
-        size: 100,
+        accessorKey: "index",
+        header: "№",
+        size: 60,
         cell: ({ row, table }) => {
             const isPlaceholder = row.original.isPlaceholder;
             const meta = table.options.meta as TableMeta<WorkRow>
 
+            // We use the index from the table rows which reflects current sorted state
+            const index = row.index + 1;
+
             return (
-                <div className="relative group/cell flex items-center h-full min-h-[40px]">
+                <div className="relative group/cell flex items-center justify-center h-full min-h-[40px]">
                     {!isPlaceholder && (
                         <TooltipProvider>
                             <Tooltip>
@@ -343,21 +337,13 @@ export const columns: ColumnDef<WorkRow>[] = [
                             </Tooltip>
                         </TooltipProvider>
                     )}
-                    <div className="font-medium text-xs md:text-sm">
-                        {isPlaceholder ? "..." : row.getValue("code")}
+                    <div className="font-medium text-xs md:text-sm text-muted-foreground">
+                        {isPlaceholder ? "..." : index}
                     </div>
                 </div>
             )
         },
-        sortingFn: (rowA, rowB, columnId) => {
-            const a = String(rowA.getValue(columnId)).split('.').map(Number);
-            const b = String(rowB.getValue(columnId)).split('.').map(Number);
-            for (let i = 0; i < Math.max(a.length, b.length); i++) {
-                if ((a[i] || 0) < (b[i] || 0)) return -1;
-                if ((a[i] || 0) > (b[i] || 0)) return 1;
-            }
-            return 0;
-        },
+        enableSorting: false, // Order is determined by server sortOrder
     },
     {
         accessorKey: "name",

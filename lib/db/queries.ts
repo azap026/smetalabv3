@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, or } from 'drizzle-orm';
+import { desc, and, eq, isNull, or, ilike, AnyColumn } from 'drizzle-orm';
 import { db } from './drizzle';
 import { activityLogs, teamMembers, teams, users, works, materials } from './schema';
 import { cookies } from 'next/headers';
@@ -7,6 +7,20 @@ import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { WorkRow } from '@/types/work-row';
 import { MaterialRow } from '@/types/material-row';
+
+/**
+ * Центр управления безопасностью данных (Multi-tenancy).
+ * Гарантирует, что запрос всегда ограничен текущим арендатором и не включает удаленные записи.
+ */
+export function withActiveTenant(table: { tenantId: AnyColumn; deletedAt: AnyColumn }, teamId: number | null | undefined) {
+  const filters = [isNull(table.deletedAt)];
+  if (typeof teamId === 'number') {
+    filters.push(or(isNull(table.tenantId), eq(table.tenantId, teamId))!);
+  } else {
+    filters.push(isNull(table.tenantId));
+  }
+  return and(...filters);
+}
 
 export const getUser = cache(async () => {
   const sessionCookie = (await cookies()).get('session');
@@ -81,8 +95,6 @@ export async function getUserWithTeam(userId: number) {
 
   return result[0];
 }
-
-
 
 export async function getActivityLogs(userId?: number) {
   let targetUserId = userId;
@@ -165,16 +177,10 @@ export async function getWorks() {
           createdAt: works.createdAt,
           updatedAt: works.updatedAt,
           deletedAt: works.deletedAt,
+          sortOrder: works.sortOrder,
         })
         .from(works)
-        .where(
-          and(
-            isNull(works.deletedAt),
-            teamId
-              ? or(isNull(works.tenantId), eq(works.tenantId, teamId))
-              : isNull(works.tenantId)
-          )
-        )
+        .where(withActiveTenant(works, teamId))
         .orderBy(works.sortOrder) as unknown as WorkRow[];
     },
     [`works-team-${teamId || 'public'}`],
@@ -185,19 +191,11 @@ export async function getWorks() {
   )();
 }
 
-import { ilike } from 'drizzle-orm';
-
 export async function getMaterials(limit?: number, search?: string) {
   const team = await getTeamForUser();
   const teamId = team?.id;
 
-  const filters = [isNull(materials.deletedAt)];
-
-  if (teamId) {
-    filters.push(or(isNull(materials.tenantId), eq(materials.tenantId, teamId))!);
-  } else {
-    filters.push(isNull(materials.tenantId));
-  }
+  const filters = [withActiveTenant(materials, teamId)];
 
   if (search) {
     filters.push(ilike(materials.name, `%${search}%`));
@@ -239,4 +237,3 @@ export async function getMaterials(limit?: number, search?: string) {
 
   return await query as unknown as MaterialRow[];
 }
-

@@ -1,6 +1,6 @@
-import { test, expect } from '../fixtures/auth.fixtures';
-import { MaterialsPage } from '../page-objects/materials-page';
-import { WorksPage } from '../page-objects/works-page';
+import { test, expect } from './fixtures/auth.fixtures';
+import { MaterialsPage } from './page-objects/materials-page';
+import { WorksPage } from './page-objects/works-page';
 
 test.describe('Zod Validation', () => {
   test.describe('Materials Validation', () => {

@@ -1,5 +1,5 @@
-import { test, expect } from '../fixtures/auth.fixtures';
-import { MaterialsPage } from '../page-objects/materials-page';
+import { test, expect } from './fixtures/auth.fixtures';
+import { MaterialsPage } from './page-objects/materials-page';
 
 test.describe('Materials Management Flow (Improved)', () => {
   test('should create material with all validations', async ({ ownerPage }) => {

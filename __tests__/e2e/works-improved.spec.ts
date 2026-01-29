@@ -1,5 +1,5 @@
-import { test, expect } from '../fixtures/auth.fixtures';
-import { WorksPage } from '../page-objects/works-page';
+import { test, expect } from './fixtures/auth.fixtures';
+import { WorksPage } from './page-objects/works-page';
 
 test.describe('Works Management Flow (Improved)', () => {
   test('should create work with category', async ({ adminPage }) => {

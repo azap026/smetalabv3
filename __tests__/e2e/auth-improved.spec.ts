@@ -1,5 +1,5 @@
-import { test, expect } from '../fixtures/auth.fixtures';
-import { AuthPage } from '../page-objects/auth-page';
+import { test, expect } from './fixtures/auth.fixtures';
+import { AuthPage } from './page-objects/auth-page';
 
 test.describe('Authentication & Authorization', () => {
   test('should render landing page with correct elements', async ({ page }) => {

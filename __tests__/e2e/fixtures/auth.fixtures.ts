@@ -63,7 +63,8 @@ async function createAuthenticatedPage(
     
     try {
       await page.waitForResponse(
-        resp => resp.url().includes(pattern) && resp.ok(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (resp: any) => resp.url().includes(pattern) && resp.ok(),
         { timeout }
       );
     } catch {
@@ -115,8 +116,6 @@ export const test = base.extend<AuthFixtures>({
     await page.context().close();
   },
 });
-
-export { baseExpect as expect };
 
 /**
  * Custom matchers for Playwright

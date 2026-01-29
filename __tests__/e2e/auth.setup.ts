@@ -15,7 +15,8 @@ async function globalSetup(config: FullConfig) {
     fs.mkdirSync(authDir, { recursive: true });
   }
 
-  const baseURL = config.use?.baseURL || 'http://localhost:3000';
+  const projectConfig = config.projects[0].use;
+  const baseURL = projectConfig?.baseURL || 'http://localhost:3000';
   const browser = await chromium.launch();
 
   try {

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { MaterialsPage } from '../page-objects/materials-page';
-import { WorksPage } from '../page-objects/works-page';
+import { MaterialsPage } from './page-objects/materials-page';
+import { WorksPage } from './page-objects/works-page';
 
 test.describe('Multi-Tenancy Isolation', () => {
   test('tenant A cannot see tenant B materials', async ({ browser }) => {

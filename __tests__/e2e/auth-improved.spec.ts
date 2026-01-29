@@ -144,6 +144,7 @@ test.describe('Authentication & Authorization', () => {
     
     // Should not have hydration errors in console
     const consoleErrors = await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).__HYDRATION_ERRORS__ || [];
     });
     expect(consoleErrors.length).toBe(0);

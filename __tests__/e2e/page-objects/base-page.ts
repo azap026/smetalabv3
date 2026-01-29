@@ -40,6 +40,7 @@ export class BasePage {
   async waitForHydration() {
     // Wait for __NEXT_DATA__ to be defined
     await this.page.waitForFunction(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).__NEXT_DATA__ !== undefined;
     }, { timeout: 10000 });
     
@@ -73,7 +74,7 @@ export class BasePage {
         },
         { timeout: 15000 }
       );
-    } catch (error) {
+    } catch {
       console.warn(`Server Action timeout (15s) for pattern: ${pattern}`);
       // Don't throw - let the test continue and fail on assertions if needed
     }
@@ -82,6 +83,7 @@ export class BasePage {
   /**
    * Wait for API call and return response
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async waitForApiResponse<T = any>(urlPattern: string | RegExp, timeout = 15000): Promise<T | null> {
     try {
       const response = await this.page.waitForResponse(
@@ -97,7 +99,7 @@ export class BasePage {
       );
       
       return await response.json();
-    } catch (error) {
+    } catch {
       console.warn(`API response timeout (${timeout}ms) for pattern: ${urlPattern}`);
       return null;
     }
@@ -219,6 +221,7 @@ export class BasePage {
     
     // Try to get from page context
     return await this.page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).__TENANT_ID__ || null;
     });
   }

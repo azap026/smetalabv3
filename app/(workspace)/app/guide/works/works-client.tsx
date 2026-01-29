@@ -250,7 +250,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
 
 
     // Sorting reset
-    const [isReordering, startReorderTransition] = useTransition();
+    const [, startReorderTransition] = useTransition();
 
     const handleReorder = () => {
         startReorderTransition(async () => {

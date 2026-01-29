@@ -30,6 +30,7 @@ type AuthFixtures = {
  * Helper to create authenticated page from storage state
  */
 async function createAuthenticatedPage(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   browser: any, 
   storageStatePath: string
 ): Promise<Page> {
@@ -42,9 +43,11 @@ async function createAuthenticatedPage(
   const page = await context.newPage();
   
   // Add custom page methods
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (page as any).waitForHydration = async () => {
     // Wait for Next.js hydration
     await page.waitForFunction(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (window as any).__NEXT_DATA__ !== undefined;
     }, { timeout: 10000 });
     
@@ -52,6 +55,7 @@ async function createAuthenticatedPage(
     await page.waitForLoadState('networkidle', { timeout: 10000 });
   };
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (page as any).waitForServerAction = async (actionUrl?: string) => {
     // Wait for Server Action to complete
     const timeout = 15000;
@@ -62,7 +66,7 @@ async function createAuthenticatedPage(
         resp => resp.url().includes(pattern) && resp.ok(),
         { timeout }
       );
-    } catch (error) {
+    } catch {
       console.warn(`Server Action timeout (${timeout}ms) for pattern: ${pattern}`);
     }
   };

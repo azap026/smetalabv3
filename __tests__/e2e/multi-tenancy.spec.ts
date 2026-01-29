@@ -134,6 +134,7 @@ test.describe('Multi-Tenancy Isolation', () => {
     const page = await context.newPage();
     
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let capturedRequest: any = null;
       
       // Intercept API request

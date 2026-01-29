@@ -111,29 +111,37 @@ export function NotificationBell() {
                             Нет уведомлений
                         </p>
                     ) : (
-                        notifications.map((notification) => (
-                            <div
-                                key={notification.id}
-                                onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-                                className={`p-2 rounded-lg cursor-pointer hover:bg-muted transition-colors ${!notification.read ? 'bg-muted/50' : ''
-                                    }`}
-                            >
-                                <div className="flex items-start gap-2">
-                                    {!notification.read && (
-                                        <div className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0" />
-                                    )}
-                                    <div className={!notification.read ? '' : 'ml-4'}>
-                                        <p className="text-sm font-medium">{notification.title}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {notification.description}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {timeAgo(notification.createdAt)}
-                                        </p>
+                        notifications.map((notification) => {
+                            const isUnread = !notification.read;
+                            const Container = isUnread ? 'button' : 'div';
+
+                            return (
+                                <Container
+                                    key={notification.id}
+                                    onClick={() => isUnread && handleMarkAsRead(notification.id)}
+                                    className={`w-full text-left p-2 rounded-lg transition-colors ${isUnread
+                                            ? 'cursor-pointer hover:bg-muted bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                                            : ''
+                                        }`}
+                                    {...(isUnread ? { 'aria-label': `Mark as read: ${notification.title}` } : {})}
+                                >
+                                    <div className="flex items-start gap-2">
+                                        {isUnread && (
+                                            <div className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                                        )}
+                                        <div className={isUnread ? '' : 'ml-4'}>
+                                            <p className="text-sm font-medium">{notification.title}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {notification.description}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {timeAgo(notification.createdAt)}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        ))
+                                </Container>
+                            );
+                        })
                     )}
                 </div>
                 <div className="border-t pt-2 mt-2">

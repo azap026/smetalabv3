@@ -39,7 +39,6 @@ export default [
             "node_modules/**",
             ".next/**",
             "bin/**",
-            "playwright-report/**",
             "test-results/**",
         ],
     },

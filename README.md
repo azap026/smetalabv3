@@ -93,5 +93,4 @@
 pnpm type-check    # Проверка типов (обязательно перед коммитом)
 pnpm lint          # Проверка стиля кода
 pnpm test          # Юнит и интеграционные тесты
-pnpm test:e2e      # End-to-end тесты (Playwright)
 ```

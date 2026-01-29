@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { searchMaterials, fetchMoreMaterials } from '@/app/actions/materials';
 import { MaterialRow } from '@/types/material-row';
 import { useToast } from "@/components/ui/use-toast";
@@ -11,7 +11,15 @@ export function useMaterialsSearch(initialData: MaterialRow[], setData: React.Di
     const [isAiSearching, startAiSearchTransition] = useTransition();
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+    // Prevent initial reset clobbering data
+    const isMounted = useRef(false);
+
     useEffect(() => {
+        if (!isMounted.current) {
+            isMounted.current = true;
+            return;
+        }
+
         if (isAiMode || isAiSearching) return;
 
         const delayDebounceFn = setTimeout(async () => {

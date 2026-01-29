@@ -51,9 +51,7 @@
 
 ### 4. Обработка ошибок
 Не возвращайте просто `null` или строки. Используйте объект `Result` из `lib/utils/result.ts`.
-```typescript
-if (!success) return { success: false, message: "Ошибка", code: "DATA_INVALID" };
-```
+Все системные ошибки автоматически логируются в **Sentry** через обертку `safeAction`.
 
 ---
 
@@ -80,6 +78,7 @@ if (!success) return { success: false, message: "Ошибка", code: "DATA_INVA
 - **Database**: Postgres (Neon/Render) + Drizzle ORM
 - **AI**: OpenAI (модель `text-embedding-3-small`) для умного поиска.
 - **UI**: Tailwind CSS + Shadcn/UI.
+- **Monitoring**: Sentry (Error tracking & Performance)
 
 ## 🚦 Быстрый Старт
 
@@ -93,5 +92,6 @@ if (!success) return { success: false, message: "Ошибка", code: "DATA_INVA
 ```bash
 pnpm type-check    # Проверка типов (обязательно перед коммитом)
 pnpm lint          # Проверка стиля кода
-pnpm test          # Юнит-тесты
+pnpm test          # Юнит и интеграционные тесты
+pnpm test:e2e      # End-to-end тесты (Playwright)
 ```

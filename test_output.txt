@@ -1,0 +1,61 @@
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m> @ dev:next C:\Users\Admin\Desktop\smetalab v2
+[2m[WebServer] [22m> next dev --turbopack
+[2m[WebServer] [22m
+
+
+[1A[2K[WebServer] [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[1A[2K[2m[WebServer] [22m   [1m[38;2;173;127;168mтЦ▓ Next.js 15.6.0-canary.59[39m[22m (Turbopack)
+
+[1A[2K[2m[WebServer] [22m   - Local:        http://localhost:3000
+[2m[WebServer] [22m   - Network:      http://100.88.6.25:3000
+[2m[WebServer] [22m   - Environments: .env.local, .env
+[2m[WebServer] [22m   - Experiments (use with caution):
+[2m[WebServer] [22m     ┬╖ clientTraceMetadata
+[2m[WebServer] [22m     ┬╖ middlewareClientMaxBodySize: "200mb"
+
+[1A[2K[2m[WebServer] [22m     ┬╖ serverActions
+
+[1A[2K[2m[WebServer] [22m
+
+[1A[2K[2m[WebServer] [22m [32m[1mтЬУ[22m[39m Starting...
+
+[1A[2K[2m[WebServer] [22m [37m[1mтЧЛ[22m[39m Compiling instrumentation Node.js ...
+
+[1A[2K[2m[WebServer] [22m [32m[1mтЬУ[22m[39m Compiled instrumentation Node.js in 1257ms
+
+[1A[2K[2m[WebServer] [22m [32m[1mтЬУ[22m[39m Compiled instrumentation Edge in 432ms
+
+[1A[2K[2m[WebServer] [22m [32m[1mтЬУ[22m[39m Compiled middleware in 226ms
+
+
+[1A[2K[WebServer]  тЪа The "middleware" file convention is deprecated. Please use "proxy" instead.
+[1A[2K[2m[WebServer] [22m [32m[1mтЬУ[22m[39m Ready in 4.4s
+
+[1A[2K[2m[WebServer] [22m [37m[1mтЧЛ[22m[39m Compiling / ...
+
+[1A[2K[2m[WebServer] [22m [32m[1mтЬУ[22m[39m Compiled / in 4.3s
+
+
+Running 1 test using 1 worker
+
+[1A[2K[2m[WebServer] [22m GET / [32m200[39m in 5174ms
+
+[1A[2K[1/1] [chromium] тА║ __tests__\e2e\works_flow.spec.ts:14:9 тА║ Works Management Flow тА║ should create, find, and delete a work
+[1A[2K  1) [chromium] тА║ __tests__\e2e\works_flow.spec.ts:14:9 тА║ Works Management Flow тА║ should create, find, and delete a work 
+
+    Error: browserType.launch: Executable doesn't exist at C:\Users\Admin\AppData\Local\ms-playwright\chromium_headless_shell-1208\chrome-headless-shell-win64\chrome-headless-shell.exe
+    тХФтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХЧ
+    тХС Looks like Playwright Test or Playwright was just installed or updated. тХС
+    тХС Please run the following command to download new browsers:              тХС
+    тХС                                                                         тХС
+    тХС     npx playwright install                                              тХС
+    тХС                                                                         тХС
+    тХС <3 Playwright Team                                                      тХС
+    тХЪтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХРтХЭ
+
+
+[1A[2K  1 failed
+    [chromium] тА║ __tests__\e2e\works_flow.spec.ts:14:9 тА║ Works Management Flow тА║ should create, find, and delete a work 
+
+[36m  Serving HTML report at http://localhost:9323. Press Ctrl+C to quit.[39m

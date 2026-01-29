@@ -10,7 +10,7 @@ describe('Button Component', () => {
 
     it('applies standard styles', () => {
         render(<Button className="custom-class">Test</Button>);
-        const button = screen.getByRole('button');
+        const button = screen.getByText('Test');
         expect(button).toHaveClass('custom-class');
     });
 });

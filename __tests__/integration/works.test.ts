@@ -3,7 +3,8 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { db } from '@/lib/db/drizzle';
 import { works, users, teams, teamMembers, NewWork } from '@/lib/db/schema';
 import { createWork, updateWork, deleteWork, insertWorkAfter } from '@/app/actions/works/crud';
-import { and, eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { WorksService } from '@/lib/services/works.service';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 
 // --- Mocks ---
@@ -122,6 +123,32 @@ describe('Works Integration Tests', () => {
         const [inserted] = await db.select().from(works).where(eq(works.code, 'W-NEW'));
         expect(inserted.sortOrder).toBeGreaterThan(100);
         expect(inserted.sortOrder).toBeLessThan(200);
+    });
+
+    it('should handle insert after null (at the end)', async () => {
+        await db.insert(works).values({ tenantId: testTeamId, code: 'W1', name: 'W1', sortOrder: 100 }).returning();
+
+        const result = await insertWorkAfter(null, { tenantId: testTeamId, code: 'W-END', name: 'End Work' });
+        expect(result.success).toBe(true);
+        const [inserted] = await db.select().from(works).where(eq(works.code, 'W-END'));
+        expect(inserted.sortOrder).toBeGreaterThan(100);
+    });
+
+    it('should reset order correctly when using reorder service', async () => {
+        await db.insert(works).values([
+            { tenantId: testTeamId, code: 'W-A', name: 'W-A', sortOrder: 0.0001 },
+            { tenantId: testTeamId, code: 'W-B', name: 'W-B', sortOrder: 0.0002 },
+        ]);
+
+        const result = await WorksService.reorder(testTeamId);
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.updatedCount).toBe(2);
+        }
+
+        const sorted = await db.select().from(works).where(eq(works.tenantId, testTeamId)).orderBy(works.sortOrder);
+        expect(sorted[0].sortOrder).toBe(100);
+        expect(sorted[1].sortOrder).toBe(200);
     });
 
     it('should_delete_work_successfully', async () => {

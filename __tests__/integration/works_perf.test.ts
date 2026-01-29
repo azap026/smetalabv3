@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { db } from '@/lib/db/drizzle';
-import { works, users, teams, teamMembers, NewUser, NewTeam, NewWork } from '@/lib/db/schema';
+import { works, users, teams, teamMembers, NewWork } from '@/lib/db/schema';
 import { reorderWorks } from '@/app/actions/works';
 import { eq } from 'drizzle-orm';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
@@ -45,8 +45,7 @@ describe('Works Reordering Performance', () => {
 
         // Mock return values
         vi.mocked(getUser).mockResolvedValue(insertedUser);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        vi.mocked(getTeamForUser).mockResolvedValue(insertedTeam as any);
+        vi.mocked(getTeamForUser).mockResolvedValue(insertedTeam as unknown as Awaited<ReturnType<typeof getTeamForUser>>);
     });
 
     afterEach(async () => {
@@ -76,11 +75,7 @@ describe('Works Reordering Performance', () => {
         }
         await db.insert(works).values(worksToInsert);
 
-        const start = performance.now();
-        // reorderWorks now resets sortOrder to 100, 200, 300...
         const result = await reorderWorks();
-        const end = performance.now();
-
         expect(result.success).toBe(true);
         // console.log(`Reorder execution time: ${(end - start).toFixed(2)}ms`);
 

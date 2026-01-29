@@ -1,4 +1,5 @@
 /* eslint-disable no-redeclare */
+import * as Sentry from '@sentry/nextjs';
 import { Result, error } from '@/lib/utils/result';
 import { User, Team } from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
@@ -36,7 +37,6 @@ export function safeAction<T, Args extends unknown[]>(
     /* eslint-enable no-redeclare, @typescript-eslint/no-explicit-any */
     return async (...args: Args): Promise<Result<T>> => {
         const start = Date.now();
-        // Приоритет имени из опций, затем имя функции, затем дефолт
         const actionName = options.name || handler.name || 'AnonymousAction';
 
         try {
@@ -46,6 +46,9 @@ export function safeAction<T, Args extends unknown[]>(
                 return error('Пользователь не авторизован', 'UNAUTHORIZED');
             }
 
+            // Set Sentry user context
+            Sentry.setUser({ id: user.id.toString(), email: user.email });
+
             let team = undefined;
             if (options.requireTeam !== false) {
                 team = await getTeamForUser();
@@ -53,31 +56,38 @@ export function safeAction<T, Args extends unknown[]>(
                     console.warn(`⚠️ [Action ${actionName}] Team not found for User ${user.id}`);
                     return error('Команда не найдена', 'TEAM_NOT_FOUND');
                 }
+                Sentry.setTag("team_id", team.id.toString());
             } else {
                 team = await getTeamForUser() || undefined;
             }
 
-            // Выполняем действие
+            // Execute handler
             const result = await handler({ user, team }, ...args);
 
             const duration = Date.now() - start;
 
-            // Логируем успешное выполнение с аргументами (скрывая чувствительные данные)
-            console.log(`🔹 [Action] User:${user.id} | ${actionName} | Time:${duration}ms | Args:`,
-                JSON.stringify(args, (key, value) => {
-                    if (typeof key === 'string' && (key.toLowerCase().includes('password') || key.toLowerCase().includes('token'))) {
-                        return '***';
-                    }
-                    if (typeof value === 'string' && value.length > 200) {
-                        return value.substring(0, 20) + '...[truncated]';
-                    }
-                    return value;
-                })
-            );
+            // Log success
+            console.log(`🔹 [Action] User:${user.id} | ${actionName} | Time:${duration}ms`);
 
             return result;
         } catch (e) {
-            console.error(`🔥 [Action Error] User:${(await getUser())?.id || 'unknown'} | ${actionName}`, e);
+            console.error(`🔥 [Action Error] ${actionName}`, e);
+
+            // Report to Sentry with context
+            Sentry.captureException(e, {
+                tags: {
+                    action: actionName,
+                },
+                extra: {
+                    args: JSON.stringify(args, (key, value) => {
+                        if (typeof key === 'string' && (key.toLowerCase().includes('password') || key.toLowerCase().includes('token'))) {
+                            return '***';
+                        }
+                        return value;
+                    }),
+                }
+            });
+
             return error('Внутренняя ошибка сервера', 'INTERNAL_ERROR');
         }
     };

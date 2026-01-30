@@ -112,10 +112,11 @@ export function NotificationBell() {
                         </p>
                     ) : (
                         notifications.map((notification) => (
-                            <div
+                            <button
                                 key={notification.id}
+                                type="button"
                                 onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-                                className={`p-2 rounded-lg cursor-pointer hover:bg-muted transition-colors ${!notification.read ? 'bg-muted/50' : ''
+                                className={`w-full text-left p-2 rounded-lg hover:bg-muted transition-colors ${!notification.read ? 'bg-muted/50' : ''
                                     }`}
                             >
                                 <div className="flex items-start gap-2">
@@ -132,7 +133,7 @@ export function NotificationBell() {
                                         </p>
                                     </div>
                                 </div>
-                            </div>
+                            </button>
                         ))
                     )}
                 </div>

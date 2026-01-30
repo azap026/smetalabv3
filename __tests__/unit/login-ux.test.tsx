@@ -6,7 +6,7 @@ import * as React from 'react';
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
-    get: (key: string) => null,
+    get: () => null,
   }),
   useRouter: () => ({
     push: vi.fn(),
@@ -65,7 +65,7 @@ describe('Login Component UX', () => {
 
   it('displays error message with accessible attributes', () => {
     // Return an error state
-    useActionStateMock.mockImplementation((action, initialState) => [{ error: 'Invalid credentials' }, action, false]);
+    useActionStateMock.mockImplementation((action) => [{ error: 'Invalid credentials' }, action, false]);
 
     render(<Login mode="signin" />);
 

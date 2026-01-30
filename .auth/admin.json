@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "session",
+      "value": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjp7ImlkIjozMzl9LCJpc0FkbWluIjpmYWxzZSwicGxhdGZvcm1Sb2xlIjpudWxsLCJleHBpcmVzIjoiMjAyNi0wMS0zMFQxOToxNTowNy40OTRaIiwiaWF0IjoxNzY5NzE0MTA3LCJleHAiOjE3Njk4MDA1MDd9.ZZaUOMJPdR0yCmPkFFLGDDCpPmNG4scR3ZzDHztEiSU",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1769800507.836199,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

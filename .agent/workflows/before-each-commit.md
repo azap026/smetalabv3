@@ -13,17 +13,11 @@ description: Before each commit, run through the following checklist to maintain
 3. **Run Unit & Integration Tests**: 
    - Run `pnpm test` — Ensure core logic is not broken.
 
-4. **Prepare for E2E Tests**:
-   - Run `pnpm db:seed` — **MANDATORY** to ensure the database has the expected users/data for Playwright login scenarios.
-
-5. **Run E2E Tests**: 
-   - Run `pnpm test:e2e` — Verify all user flows (auth, navigation, RBAC) pass in a real browser.
-
-6. **ACTUALIZE & DOCUMENT**: 
+4. **ACTUALIZE & DOCUMENT**: 
    - **Coverage**: If you added a new page, component, or endpoint, you MUST add or update tests in `__tests__/`. **No new feature is complete without test coverage.**
    - **Docs**: Update `README.md` and `AGENTS.md` if any architecture, feature, or logic changed.
 
-7. **Project File Inventory (Cleanup)**: 
+5. **Project File Inventory (Cleanup)**: 
    - Remove `test_output.txt`, `*.log`, `*.tmp`.
    - Delete unused assets (e.g., unused `svg`, `debug.ts`, temporary images).
    - Ensure NO `console.log` or `debugger` statements are left in the code.

@@ -1,0 +1,25 @@
+name: Task
+description: Track a specific task or piece of work
+labels: ["task"]
+body:
+  - type: textarea
+    id: task-description
+    attributes:
+      label: Task Description
+      description: What needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why is this task necessary?
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: Research
+        - label: Implementation
+        - label: Testing
+        - label: Documentation

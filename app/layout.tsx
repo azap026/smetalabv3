@@ -16,7 +16,10 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ['latin'] });
 
-export default async function RootLayout({
+import { Suspense } from 'react';
+import { SWRWrapper } from '@/components/swr-wrapper';
+
+export default function RootLayout({
   children
 }: {
   children: React.ReactNode;
@@ -24,26 +27,20 @@ export default async function RootLayout({
   const userPromise = getUser();
   const teamPromise = getTeamForUser();
 
-  const [user, team] = await Promise.all([userPromise, teamPromise]);
-
   return (
     <html
       lang="en"
-      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
+      className={manrope.className}
+      suppressHydrationWarning
     >
-      <body className="min-h-[100dvh] bg-gray-50">
-        <SWRConfig
-          value={{
-            fallback: {
-              '/api/user': user,
-              '/api/team': team
-            }
-          }}
-        >
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </SWRConfig>
+      <body className="min-h-[100dvh] bg-gray-50 dark:bg-gray-950 text-black dark:text-white">
+        <Suspense>
+          <SWRWrapper userPromise={userPromise} teamPromise={teamPromise}>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </SWRWrapper>
+        </Suspense>
       </body>
     </html>
   );

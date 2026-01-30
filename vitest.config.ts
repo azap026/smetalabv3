@@ -10,7 +10,7 @@ export default defineConfig({
             '@': path.resolve(__dirname, './'),
         },
         include: ['__tests__/**/*.{test,spec}.{ts,tsx}'],
-        exclude: ['__tests__/e2e/**/*', 'node_modules/**/*'],
+        exclude: ['node_modules/**/*'],
         setupFiles: ['./vitest.setup.ts'],
     },
 });

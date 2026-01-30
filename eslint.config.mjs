@@ -29,7 +29,11 @@ export default [
         rules: {
             ...tseslint.configs.recommended.rules,
             "@typescript-eslint/no-explicit-any": "error",
-            "@typescript-eslint/no-unused-vars": "warn",
+            "@typescript-eslint/no-unused-vars": ["warn", {
+                "argsIgnorePattern": "^_",
+                "varsIgnorePattern": "^_",
+                "caughtErrorsIgnorePattern": "^_"
+            }],
             "no-unused-vars": "off",
             "no-case-declarations": "off",
         },
@@ -39,7 +43,6 @@ export default [
             "node_modules/**",
             ".next/**",
             "bin/**",
-            "playwright-report/**",
             "test-results/**",
         ],
     },

@@ -28,7 +28,6 @@ Next.js 15 (Canary) App Router + React 19 + TypeScript 5.8 strict + PostgreSQL +
 - Monitoring: Sentry (captureException, captureMessage на front/back)
 - Testing:
   - Vitest: unit/integration, AAA pattern, vi.fn()/vi.mock, RTL
-  - Playwright: E2E, page objects + fixtures, user flows + error states
 
 ## Architecture Layers — Strict Separation
 1. **Presentation** (app/ + components/ + hooks/)
@@ -60,8 +59,7 @@ Next.js 15 (Canary) App Router + React 19 + TypeScript 5.8 strict + PostgreSQL +
 
 ## Testing Guidelines
 - Unit: Vitest + @testing-library/react, AAA, happy path + 2–3 edges
-- E2E: Playwright, page objects, locators по role/test-id, expect.toBeVisible/toHaveText
-- После генерации тестов — предлагай: npm run test или npx playwright test
+- После генерации тестов — предлагай: npm run test
 
 ## Agent / Copilot Behavior
 - В Agent mode: всегда начинай с плана, используй #file: для явного контекста

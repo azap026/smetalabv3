@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, or, ilike, AnyColumn } from 'drizzle-orm';
+import { desc, and, eq, isNull, or, ilike, AnyColumn, sql, gt } from 'drizzle-orm';
 import { db } from './drizzle';
 import { activityLogs, teamMembers, teams, users, works, materials } from './schema';
 import { cookies } from 'next/headers';
@@ -152,7 +152,58 @@ export const getTeamForUser = cache(async () => {
   return result?.team || null;
 });
 
-export async function getWorks() {
+export async function getWorks(limit?: number, lastSortOrder?: number) {
+  const team = await getTeamForUser();
+  const teamId = team?.id;
+
+  const filters = [withActiveTenant(works, teamId)];
+
+  if (typeof lastSortOrder === 'number') {
+    filters.push(gt(works.sortOrder, lastSortOrder));
+  }
+
+  const query = db
+    .select({
+      id: works.id,
+      tenantId: works.tenantId,
+      code: works.code,
+      name: works.name,
+      unit: works.unit,
+      price: works.price,
+      phase: works.phase,
+      category: works.category,
+      subcategory: works.subcategory,
+      shortDescription: works.shortDescription,
+      description: works.description,
+      status: works.status,
+      tags: works.tags,
+      metadata: works.metadata,
+      createdAt: works.createdAt,
+      updatedAt: works.updatedAt,
+      deletedAt: works.deletedAt,
+      sortOrder: works.sortOrder,
+    })
+    .from(works)
+    .where(and(...filters))
+    .orderBy(works.sortOrder)
+    .limit(limit || 5);
+
+  return await query as unknown as WorkRow[];
+}
+
+export async function getWorksCount() {
+  const team = await getTeamForUser();
+  const teamId = team?.id;
+
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(works)
+    .where(withActiveTenant(works, teamId));
+
+  return Number(result[0].count);
+}
+
+export async function getWorksCached() {
   const team = await getTeamForUser();
   const teamId = team?.id;
 
@@ -191,7 +242,7 @@ export async function getWorks() {
   )();
 }
 
-export async function getMaterials(limit?: number, search?: string) {
+export async function getMaterials(limit?: number, search?: string, lastCode?: string) {
   const team = await getTeamForUser();
   const teamId = team?.id;
 
@@ -199,6 +250,10 @@ export async function getMaterials(limit?: number, search?: string) {
 
   if (search) {
     filters.push(ilike(materials.name, `%${search}%`));
+  }
+
+  if (lastCode) {
+    filters.push(sql`${materials.code} > ${lastCode}`);
   }
 
   let query = db
@@ -219,8 +274,8 @@ export async function getMaterials(limit?: number, search?: string) {
       imageUrl: materials.imageUrl,
       description: materials.description,
       status: materials.status,
-      metadata: materials.metadata,
       tags: materials.tags,
+      metadata: materials.metadata,
       createdAt: materials.createdAt,
       updatedAt: materials.updatedAt,
       deletedAt: materials.deletedAt,
@@ -229,11 +284,29 @@ export async function getMaterials(limit?: number, search?: string) {
     .where(and(...filters))
     .orderBy(materials.code);
 
-  const finalLimit = limit || (search ? 500 : 1000);
+  const finalLimit = limit || (search ? 5 : 5);
   if (finalLimit) {
     // @ts-expect-error - constructing query dynamically
     query = query.limit(finalLimit);
   }
 
   return await query as unknown as MaterialRow[];
+}
+
+export async function getMaterialsCount(search?: string) {
+  const team = await getTeamForUser();
+  const teamId = team?.id;
+
+  const filters = [withActiveTenant(materials, teamId)];
+
+  if (search) {
+    filters.push(ilike(materials.name, `%${search}%`));
+  }
+
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(materials)
+    .where(and(...filters));
+
+  return Number(result[0].count);
 }

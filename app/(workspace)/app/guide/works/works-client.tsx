@@ -36,17 +36,20 @@ import {
 } from "@/components/ui/tooltip";
 
 import { WorkRow } from '@/types/work-row';
+import { useWorksTable } from './hooks/useWorksTable';
 
 interface WorksClientProps {
     initialData: WorkRow[];
+    totalCount: number;
 }
 
-export function WorksClient({ initialData }: WorksClientProps) {
+import { useWorksSearch } from './hooks/useWorksSearch';
+
+export function WorksClient({ initialData, totalCount }: WorksClientProps) {
     const { toast } = useToast();
     const [isExporting, startExportTransition] = useTransition();
     const [isImporting, startImportTransition] = useTransition();
     const [isDeletingAll, startDeleteAllTransition] = useTransition();
-    const [isAiSearching, startAiSearchTransition] = useTransition();
     const [mounted, setMounted] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,12 +57,6 @@ export function WorksClient({ initialData }: WorksClientProps) {
         setMounted(true);
     }, []);
 
-    // Main data state
-    const [data, setData] = useState<WorkRow[]>(initialData);
-
-    useEffect(() => {
-        setData(initialData);
-    }, [initialData]);
 
     const handleExport = () => {
         startExportTransition(async () => {
@@ -133,124 +130,25 @@ export function WorksClient({ initialData }: WorksClientProps) {
 
 
 
-    // --- Inline Insertion Logic ---
-    const [isInserting, startInsertTransition] = useTransition();
+    const {
+        data,
+        setData,
+        isInserting,
+        onInsertRequest,
+        onCancelInsert,
+        updatePlaceholderRow,
+        onSaveInsert
+    } = useWorksTable(initialData);
 
-    const onInsertRequest = (afterId?: string) => {
-        if (data.some(r => r.isPlaceholder)) return;
+    const search = useWorksSearch(initialData, data, setData);
 
-        // If no ID provided or data is empty, add to the end (or start if empty)
-        if (!afterId || data.length === 0) {
-            const placeholder: WorkRow = {
-                id: 'placeholder-' + Date.now(),
-                tenantId: initialData[0]?.tenantId || null, // Fallback if empty
-                code: data.length > 0 ? `${data.length + 1}` : '1.1', // Simple auto-increment guess
-                name: '',
-                unit: '',
-                price: 0,
-                phase: data.length > 0 ? data[data.length - 1].phase : 'Этап 1',
-                category: data.length > 0 ? data[data.length - 1].category : '',
-                subcategory: data.length > 0 ? data[data.length - 1].subcategory : '',
-                status: 'draft',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                deletedAt: null,
-                shortDescription: null,
-                description: null,
-                tags: null,
-                metadata: {},
-                embedding: null,
-                sortOrder: 0,
-                isPlaceholder: true
-            };
-            setData([...data, placeholder]);
-            return;
-        }
-
-        const index = data.findIndex(r => r.id === afterId);
-        if (index === -1) return;
-
-        const placeholder: WorkRow = {
-            id: 'placeholder-' + Date.now(),
-            tenantId: data[index].tenantId,
-            code: '',
-            name: '',
-            unit: '',
-            price: 0,
-            phase: data[index].phase,
-            category: data[index].category,
-            subcategory: data[index].subcategory,
-            status: 'draft',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            deletedAt: null,
-            shortDescription: null,
-            description: null,
-            tags: null,
-            metadata: {},
-            embedding: null,
-            sortOrder: 0,
-            isPlaceholder: true
-        };
-
-        const newData = [...data];
-        newData.splice(index + 1, 0, placeholder);
-        setData(newData);
-    };
-
-    const onCancelInsert = () => {
-        setData(data.filter(r => !r.isPlaceholder));
-    };
-
-    const updatePlaceholderRow = (placeholderId: string, partial: Partial<WorkRow>) => {
-        setData(prev => prev.map(row =>
-            row.id === placeholderId ? { ...row, ...partial } : row
-        ));
-    };
-
-    const onSaveInsert = (placeholderId: string) => {
-        const row = data.find(r => r.id === placeholderId);
-        if (!row) return;
-
-        if (!row.name) {
-            toast({ variant: "destructive", title: "Ошибка", description: "Введите название работы." });
-            return;
-        }
-        if (!row.unit) {
-            toast({ variant: "destructive", title: "Ошибка", description: "Выберите единицу измерения." });
-            return;
-        }
-        if (row.price != null && row.price < 0) {
-            toast({ variant: "destructive", title: "Ошибка", description: "Цена не может быть отрицательной." });
-            return;
-        }
-
-        startInsertTransition(async () => {
-            const placeholderIndex = data.findIndex(r => r.id === placeholderId);
-            const anchorWork = placeholderIndex > 0 ? data[placeholderIndex - 1] : null;
-
-            const result = await insertWorkAfter(anchorWork ? anchorWork.id : null, {
-                code: row.code,
-                name: row.name,
-                unit: row.unit,
-                price: Number(row.price),
-                phase: row.phase,
-                category: row.category,
-                subcategory: row.subcategory,
-                status: 'active'
-            });
-
-            if (result.success) {
-                toast({ title: "Запись вставлена", description: result.message });
-            } else {
-                toast({ variant: "destructive", title: "Ошибка", description: result.message });
-            }
-        });
-    };
+    useEffect(() => {
+        setData(initialData);
+    }, [initialData, setData]);
 
 
     // Sorting reset
-    const [isReordering, startReorderTransition] = useTransition();
+    const [, startReorderTransition] = useTransition();
 
     const handleReorder = () => {
         startReorderTransition(async () => {
@@ -263,36 +161,6 @@ export function WorksClient({ initialData }: WorksClientProps) {
         });
     };
 
-    const handleAiSearch = async (query: string) => {
-        if (!query || query.length < 2) {
-            setData(initialData);
-            return;
-        }
-
-        toast({
-            title: "ИИ Поиск...",
-            description: "Ищем похожие работы...",
-        });
-
-        startAiSearchTransition(async () => {
-            console.log(`Starting client-side search for: ${query}`);
-            const result = await searchWorks(query);
-
-            if (result.success) {
-                setData(result.data as WorkRow[]);
-                toast({
-                    title: "Найдено",
-                    description: `Найдено ${result.data.length} похожих работ.`,
-                });
-            } else {
-                toast({
-                    variant: "destructive",
-                    title: "Ошибка поиска",
-                    description: result.message,
-                });
-            }
-        });
-    };
 
     return (
         <div className="space-y-6">
@@ -321,7 +189,11 @@ export function WorksClient({ initialData }: WorksClientProps) {
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-1 md:px-0">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight md:text-3xl">Работы</h2>
+                    <h2 className="text-2xl font-bold tracking-tight md:text-3xl flex items-center gap-2">
+                        Работы
+                        <span className="text-muted-foreground font-normal text-xl md:text-2xl">({totalCount.toLocaleString('ru-RU')})</span>
+                        {search.isAiSearching && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}
+                    </h2>
                     <p className="text-sm text-muted-foreground md:text-base">
                         Базовая стоимость и состав работ
                     </p>
@@ -413,8 +285,12 @@ export function WorksClient({ initialData }: WorksClientProps) {
                     filterColumn="name"
                     filterPlaceholder="Поиск по наименованию..."
                     showAiSearch={true}
-                    onAiSearch={handleAiSearch}
-                    isSearching={isAiSearching}
+                    onAiSearch={search.handleAiSearch}
+                    isSearching={search.isAiSearching}
+                    externalSearchValue={search.searchTerm}
+                    onSearchValueChange={search.setSearchTerm}
+                    onEndReached={search.loadMore}
+                    isLoadingMore={search.isLoadingMore}
                     meta={{
                         onInsertRequest,
                         onCancelInsert,

@@ -9,6 +9,6 @@ export default {
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.POSTGRES_URL!,
-    ssl: { rejectUnauthorized: false },
+    ssl: process.env.POSTGRES_URL?.includes('localhost') || process.env.POSTGRES_URL?.includes('127.0.0.1') ? false : { rejectUnauthorized: false },
   },
 } satisfies Config;

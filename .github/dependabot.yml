@@ -25,11 +25,9 @@ updates:
           - "minor"
           - "patch"
       production-dependencies:
-        patterns:
-          - "next*"
-          - "react*"
-          - "drizzle*"
+        dependency-type: "production"
         update-types:
+          - "minor"
           - "patch"
 
   - package-ecosystem: "github-actions"

@@ -1,7 +1,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { db } from '@/lib/db/drizzle';
-import { users, teams, teamMembers, invitations, activityLogs, permissions, rolePermissions } from '@/lib/db/schema';
+import { users, teams, teamMembers, invitations, activityLogs } from '@/lib/db/schema';
 import { inviteTeamMember, removeTeamMember } from '@/app/(login)/actions';
 import { eq } from 'drizzle-orm';
 import * as emailUtils from '@/lib/email/email';
@@ -58,26 +58,6 @@ describe('Team Management Integration', () => {
             teamId: teamId,
             role: 'admin'
         });
-
-        // Ensure permissions exist for the tests to pass (RBAC)
-        const [perm] = await db.select().from(permissions).where(eq(permissions.code, 'team'));
-        let permId = perm?.id;
-
-        if (!perm) {
-            const [newPerm] = await db.insert(permissions).values({
-                code: 'team',
-                name: 'Team Management',
-                scope: 'tenant',
-                description: 'Manage team settings and members'
-            }).returning();
-            permId = newPerm.id;
-        }
-
-        await db.insert(rolePermissions).values({
-            role: 'admin',
-            permissionId: permId,
-            accessLevel: 'manage'
-        }).onConflictDoNothing();
 
         // 2. Setup Mocks
         vi.mocked(queryUtils.getUser).mockResolvedValue(owner as unknown as Awaited<ReturnType<typeof queryUtils.getUser>>);

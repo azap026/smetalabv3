@@ -8,7 +8,7 @@ import {
 } from '@/lib/db/queries';
 import { getBaseUrl } from '@/lib/utils/url';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'mock_stripe_key', {
   apiVersion: '2026-01-28.clover'
 });
 

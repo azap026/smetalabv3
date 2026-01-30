@@ -10,8 +10,16 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '200mb',
     },
     middlewareClientMaxBodySize: '200mb',
-    /* ppr: true,
-    clientSegmentCache: true */
+    ppr: true,
+    clientSegmentCache: true
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
   },
   output: "standalone",
   async headers() {

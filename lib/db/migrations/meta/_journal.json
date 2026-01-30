@@ -134,6 +134,20 @@
       "when": 1769631173567,
       "tag": "0018_parallel_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1769797625026,
+      "tag": "0019_many_white_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1769798044360,
+      "tag": "0020_bumpy_thunderbolts",
+      "breakpoints": true
     }
   ]
 }

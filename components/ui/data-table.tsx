@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -11,9 +10,33 @@ import {
     getFilteredRowModel,
     getSortedRowModel,
     useReactTable,
+    Row,
 } from "@tanstack/react-table"
 import { ChevronDown, ChevronUp, ChevronsUpDown, Search, Sparkles, Loader2 } from "lucide-react"
-import { TableVirtuoso } from "react-virtuoso"
+import { TableVirtuoso, TableComponents } from "react-virtuoso"
+import { useDeferredValue, memo, useMemo, useState, useEffect, useCallback, useTransition, forwardRef, HTMLAttributes } from "react"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { useToast } from "@/components/ui/use-toast"
+import { deleteWork, updateWork } from "@/app/actions/works"
+import { UnitSelect } from "@/components/unit-select"
 
 import {
     Tooltip,
@@ -63,8 +86,8 @@ interface VirtuosoHeader {
     };
 }
 
-const VirtuosoTableComponents = {
-    Table: ({ children, style, context, ...props }: React.HTMLAttributes<HTMLTableElement> & { context?: { flatHeaders?: VirtuosoHeader[] } }) => (
+const VirtuosoTableComponents: TableComponents<any, any> = {
+    Table: ({ children, style, ...props }) => (
         <table
             {...props}
             style={{
@@ -75,27 +98,49 @@ const VirtuosoTableComponents = {
                 borderSpacing: 0
             }}
         >
-            <colgroup>
-                {context?.flatHeaders?.map((header: VirtuosoHeader) => (
-                    <col
-                        key={header.id}
-                        style={{ width: header.column.columnDef.size ? `${header.column.columnDef.size}px` : 'auto' }}
-                    />
-                ))}
-            </colgroup>
             {children}
         </table>
     ),
-    TableHead: React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
+    TableHead: forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
         <thead {...props} ref={ref} className="z-40" />
     )),
-    TableRow: (props: React.HTMLAttributes<HTMLTableRowElement>) => (
+    TableRow: (props) => (
         <tr {...props} className="border-b last:border-0 hover:bg-muted/30 transition-colors group group/row" />
     ),
-    TableBody: React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
+    TableBody: forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>((props, ref) => (
         <tbody {...props} ref={ref} />
     )),
 };
+
+interface DataTableRowProps<TData> {
+    row: Row<TData>;
+}
+
+const DataTableRow = memo(({ row }: DataTableRowProps<any>) => {
+    return (
+        <>
+            {row.getVisibleCells().map((cell: any) => (
+                <td
+                    key={cell.id}
+                    className="p-3 align-middle border-b border-r last:border-r-0"
+                    style={{ width: cell.column.getSize() }}
+                >
+                    <div className="w-full text-xs md:text-sm">
+                        {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                        )}
+                    </div>
+                </td>
+            ))}
+        </>
+    );
+}, (prev, next) => {
+    // Only re-render if the actual row data or selected state changes
+    return prev.row.original === next.row.original &&
+        prev.row.getIsSelected() === next.row.getIsSelected();
+});
+DataTableRow.displayName = "DataTableRow";
 
 export function DataTable<TData, TValue>({
     columns,
@@ -110,30 +155,85 @@ export function DataTable<TData, TValue>({
     isAiMode: externalAiMode,
     onAiModeChange,
     externalSearchValue,
-    onSearchValueChange
+    onSearchValueChange,
+    onEndReached,
+    isLoadingMore,
 }: DataTableProps<TData, TValue> & {
     isSearching?: boolean;
     isAiMode?: boolean;
     onAiModeChange?: (val: boolean) => void;
     externalSearchValue?: string;
     onSearchValueChange?: (val: string) => void;
+    onEndReached?: () => void;
+    isLoadingMore?: boolean;
 }) {
-    const [sorting, setSorting] = React.useState<SortingState>([])
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-    const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-    const [rowSelection, setRowSelection] = React.useState({})
-    const [internalAiMode, setInternalAiMode] = React.useState(false)
+    const [sorting, setSorting] = useState<SortingState>([])
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+    const [rowSelection, setRowSelection] = useState({})
+    const [internalAiMode, setInternalAiMode] = useState(false)
 
     const isAiMode = externalAiMode ?? internalAiMode;
     const setIsAiMode = onAiModeChange ?? setInternalAiMode;
 
-    // Local state for input to allow "AI Mode" to ignore table filters while keeping text
-    const [searchValue, setSearchValue] = React.useState("")
+    const [searchValue, setSearchValue] = useState("")
+    const deferredSearchValue = useDeferredValue(searchValue)
+    const { toast } = useToast()
+    const [editingRow, setEditingRow] = useState<any | null>(null)
+    const [deletingRow, setDeletingRow] = useState<any | null>(null)
+    const [isUpdating, startUpdateTransition] = useTransition()
+    const [isDeleting, startDeleteTransition] = useTransition()
 
-    const tableState = React.useMemo(() => ({
+    // Form data for editing
+    const [editFormData, setEditFormData] = useState<any>(null)
+
+    useEffect(() => {
+        if (editingRow) {
+            setEditFormData({
+                name: editingRow.name || "",
+                price: editingRow.price?.toString() || "",
+                unit: editingRow.unit || "",
+                phase: editingRow.phase || "",
+                category: editingRow.category || "",
+                subcategory: editingRow.subcategory || "",
+            })
+        } else {
+            setEditFormData(null)
+        }
+    }, [editingRow])
+
+    const handleUpdate = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!editingRow || !editFormData) return
+        startUpdateTransition(async () => {
+            const result = await updateWork(editingRow.id, {
+                ...editFormData,
+                price: editFormData.price ? Number(editFormData.price) : undefined
+            })
+            if (result.success) {
+                toast({ title: "Запись обновлена", description: result.message })
+                setEditingRow(null)
+            } else {
+                toast({ variant: "destructive", title: "Ошибка", description: result.message })
+            }
+        })
+    }
+
+    const handleDelete = () => {
+        if (!deletingRow) return
+        startDeleteTransition(async () => {
+            const result = await deleteWork(deletingRow.id)
+            if (result.success) {
+                toast({ title: "Запись удалена", description: result.message })
+                setDeletingRow(null)
+            } else {
+                toast({ variant: "destructive", title: "Ошибка", description: result.message })
+            }
+        })
+    }
+
+    const tableState = useMemo(() => ({
         sorting,
-        // If we have external search or AI mode, we disable local column filters 
-        // because we are doing server-side filtering
         columnFilters: (isAiMode || externalSearchValue) ? [] : columnFilters,
         columnVisibility,
         rowSelection,
@@ -150,12 +250,23 @@ export function DataTable<TData, TValue>({
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
         getRowId: (row) => (row as { id: string }).id,
-        meta,
+        meta: {
+            ...meta,
+            setEditingRow,
+            setDeletingRow
+        },
         state: tableState,
     })
 
-    // Sync input with table filter
-    React.useEffect(() => {
+    // Unified debounced/deferred search for table filtering
+    useEffect(() => {
+        if (!isAiMode && filterColumn && !onSearchValueChange) {
+            table.getColumn(filterColumn)?.setFilterValue(deferredSearchValue)
+        }
+    }, [deferredSearchValue, isAiMode, filterColumn, table, onSearchValueChange]);
+
+    // Sync input with table filter (if changed externally)
+    useEffect(() => {
         if (!isAiMode && filterColumn) {
             const val = (table.getColumn(filterColumn)?.getFilterValue() as string) ?? "";
             setSearchValue(val);
@@ -165,12 +276,12 @@ export function DataTable<TData, TValue>({
     const { rows } = table.getRowModel()
     const flatHeaders = table.getFlatHeaders();
 
-    const handleSearchClick = () => {
-        if (searchValue && showAiSearch && onAiSearch) {
+    const handleSearchClick = useCallback(() => {
+        if (searchValue.trim()) {
             setIsAiMode(true)
-            onAiSearch(searchValue)
+            onAiSearch?.(searchValue)
         }
-    }
+    }, [searchValue, onAiSearch, setIsAiMode]);
 
     return (
         <TooltipProvider>
@@ -192,17 +303,11 @@ export function DataTable<TData, TValue>({
                                     setSearchValue(val)
                                     onSearchValueChange?.(val)
 
-                                    // If we were in AI mode and user changed text, exit AI mode and reset data
                                     if (isAiMode) {
                                         setIsAiMode(false)
                                         onAiSearch?.("")
                                     } else if (val === "") {
-                                        // If just clearing normal search
                                         onAiSearch?.("")
-                                    }
-
-                                    if (!onSearchValueChange) {
-                                        table.getColumn(filterColumn)?.setFilterValue(val)
                                     }
                                 }}
                                 className={cn(
@@ -246,12 +351,17 @@ export function DataTable<TData, TValue>({
                 )}
 
                 {/* Virtualized Table */}
-                <div className="rounded-md border shadow-sm bg-card overflow-hidden">
+                <div
+                    className="rounded-md border bg-card shadow-sm overflow-hidden"
+                    style={{ contain: 'layout style paint' }}
+                >
                     <TableVirtuoso
-                        style={{ height }}
+                        style={{ height, willChange: 'transform' }}
                         data={rows}
                         context={{ flatHeaders }}
                         components={VirtuosoTableComponents}
+                        overscan={800}
+                        endReached={onEndReached}
                         fixedHeaderContent={() => (
                             <>
                                 {table.getHeaderGroups().map((headerGroup) => (
@@ -264,6 +374,7 @@ export function DataTable<TData, TValue>({
                                                 <th
                                                     key={header.id}
                                                     className="h-12 px-3 text-left align-middle font-medium text-muted-foreground bg-muted/50 border-b border-r last:border-r-0 transition-colors"
+                                                    style={{ width: header.getSize() }}
                                                 >
                                                     {header.isPlaceholder ? null : (
                                                         <div
@@ -300,21 +411,7 @@ export function DataTable<TData, TValue>({
                             </>
                         )}
                         itemContent={(_index, row) => (
-                            <>
-                                {row.getVisibleCells().map((cell) => (
-                                    <td
-                                        key={cell.id}
-                                        className="p-3 align-middle border-b border-r last:border-r-0 overflow-hidden"
-                                    >
-                                        <div className="truncate w-full text-xs md:text-sm">
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </div>
-                                    </td>
-                                ))}
-                            </>
+                            <DataTableRow row={row} />
                         )}
                     />
                 </div>
@@ -328,7 +425,90 @@ export function DataTable<TData, TValue>({
                         )}
                     </div>
                 </div>
+
+                {/* --- Shared Dialog Manager --- */}
+                <Dialog open={!!editingRow} onOpenChange={(open) => !open && setEditingRow(null)}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Изменить запись</DialogTitle>
+                            <DialogDescription>Внесите изменения и нажмите сохранить.</DialogDescription>
+                        </DialogHeader>
+                        {editFormData && (
+                            <form onSubmit={handleUpdate} className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="name" className="text-right">Название</Label>
+                                    <Input
+                                        id="name"
+                                        value={editFormData.name}
+                                        onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                        className="col-span-3 h-8 text-sm"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="unit" className="text-right">Ед. изм.</Label>
+                                    <div className="col-span-3">
+                                        <UnitSelect
+                                            value={editFormData.unit || ""}
+                                            onChange={(val) => setEditFormData({ ...editFormData, unit: val })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="price" className="text-right">Цена</Label>
+                                    <Input
+                                        id="price"
+                                        type="number"
+                                        value={editFormData.price}
+                                        onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
+                                        className="col-span-3 h-8 text-sm"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="phase" className="text-right">Этап</Label>
+                                    <Input
+                                        id="phase"
+                                        value={editFormData.phase}
+                                        onChange={(e) => setEditFormData({ ...editFormData, phase: e.target.value })}
+                                        className="col-span-3 h-8 text-sm"
+                                    />
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit" disabled={isUpdating} className="h-9 px-8">
+                                        {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Сохранить
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
+                <AlertDialog open={!!deletingRow} onOpenChange={(open) => !open && setDeletingRow(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Запись "{deletingRow?.name}" будет удалена безвозвратно.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Отмена</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    handleDelete()
+                                }}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? "Удаление..." : "Удалить"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
-        </TooltipProvider>
+        </TooltipProvider >
     )
 }

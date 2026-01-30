@@ -11,7 +11,7 @@ export const deleteWork = safeAction(async function deleteWorkHandler({ team }, 
         revalidatePath('/app/guide/works');
     }
     return result;
-}, { name: 'deleteWork' });
+}, { name: 'deleteWork', allowedRoles: ['admin'] });
 
 export const deleteAllWorks = safeAction(async function deleteAllWorksHandler({ team }) {
     const result = await WorksService.deleteAll(team.id);
@@ -19,7 +19,7 @@ export const deleteAllWorks = safeAction(async function deleteAllWorksHandler({ 
         revalidatePath('/app/guide/works');
     }
     return result;
-}, { name: 'deleteAllWorks' });
+}, { name: 'deleteAllWorks', allowedRoles: ['admin'] });
 
 export const updateWork = safeAction(async function updateWorkHandler({ team }, id: string, data: Partial<NewWork>) {
     const result = await WorksService.update(team.id, id, data);
@@ -27,7 +27,7 @@ export const updateWork = safeAction(async function updateWorkHandler({ team }, 
         revalidatePath('/app/guide/works');
     }
     return result;
-}, { name: 'updateWork' });
+}, { name: 'updateWork', allowedRoles: ['admin', 'manager'] });
 
 export const createWork = safeAction(async function createWorkHandler({ team }, data: NewWork) {
     const result = await WorksService.create(team.id, data);
@@ -35,7 +35,7 @@ export const createWork = safeAction(async function createWorkHandler({ team }, 
         revalidatePath('/app/guide/works');
     }
     return result;
-}, { name: 'createWork' });
+}, { name: 'createWork', allowedRoles: ['admin', 'manager'] });
 
 export const insertWorkAfter = safeAction(async function insertWorkAfterHandler({ team }, afterId: string | null, data: NewWork) {
     const result = await WorksService.insertAfter(team.id, afterId, data);
@@ -43,4 +43,4 @@ export const insertWorkAfter = safeAction(async function insertWorkAfterHandler(
         revalidatePath('/app/guide/works');
     }
     return result;
-}, { name: 'insertWorkAfter' });
+}, { name: 'insertWorkAfter', allowedRoles: ['admin', 'manager'] });

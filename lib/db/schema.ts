@@ -12,6 +12,7 @@ import {
   customType,
   jsonb,
   doublePrecision,
+  uuid,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
@@ -41,7 +42,9 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
-});
+}, (table) => [
+  index('users_deleted_at_idx').on(table.deletedAt),
+]);
 
 // ═══════════════════════════════════════════════════════════════
 // TEAMS (Tenants)
@@ -57,7 +60,9 @@ export const teams = pgTable('teams', {
   stripeProductId: text('stripe_product_id'),
   planName: varchar('plan_name', { length: 50 }),
   subscriptionStatus: varchar('subscription_status', { length: 20 }),
-});
+}, (table) => [
+  index('teams_created_at_idx').on(table.createdAt.desc()),
+]);
 
 // ═══════════════════════════════════════════════════════════════
 // TEAM MEMBERS
@@ -176,7 +181,9 @@ export const activityLogs = pgTable('activity_logs', {
   action: text('action').notNull(),
   timestamp: timestamp('timestamp').notNull().defaultNow(),
   ipAddress: varchar('ip_address', { length: 45 }),
-});
+}, (table) => [
+  index('activity_logs_user_timestamp_idx').on(table.userId, table.timestamp.desc()),
+]);
 
 // ═══════════════════════════════════════════════════════════════
 // INVITATIONS
@@ -232,12 +239,18 @@ export const vector = customType<{
   },
 });
 
+export const tsvector = customType<{ data: string }>({
+  dataType() {
+    return 'tsvector';
+  },
+});
+
 // ═══════════════════════════════════════════════════════════════
 // WORKS (Guide)
 // ═══════════════════════════════════════════════════════════════
 
 export const works = pgTable('works', {
-  id: text('id').default(sql`gen_random_uuid()`).primaryKey(),
+  id: uuid('id').default(sql`gen_random_uuid()`).primaryKey(),
   tenantId: integer('tenant_id').references(() => teams.id),
 
   code: varchar('code', { length: 64 }).notNull(),
@@ -258,7 +271,7 @@ export const works = pgTable('works', {
   metadata: jsonb('metadata').default({}),
 
   embedding: vector('embedding', { dimensions: 1536 }), // OpenAI text-embedding-3-small uses 1536 dimensions
-  // search_vector: customType<{ data: string }>({ dataType() { return 'tsvector'; } })('search_vector'),
+  searchVector: tsvector('search_vector'),
 
   deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -269,6 +282,8 @@ export const works = pgTable('works', {
   uniqueIndex('idx_works_code_tenant_unique').on(table.tenantId, table.code),
   index('works_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
   index('works_tenant_unit_idx').on(table.tenantId, table.unit),
+  index('works_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),
+  index('works_search_idx').using('gin', table.searchVector),
 ]);
 
 // ═══════════════════════════════════════════════════════════════
@@ -276,7 +291,7 @@ export const works = pgTable('works', {
 // ═══════════════════════════════════════════════════════════════
 
 export const materials = pgTable('materials', {
-  id: text('id').default(sql`gen_random_uuid()`).primaryKey(),
+  id: uuid('id').default(sql`gen_random_uuid()`).primaryKey(),
   tenantId: integer('tenant_id').references(() => teams.id),
 
   code: varchar('code', { length: 64 }).notNull(),
@@ -300,6 +315,7 @@ export const materials = pgTable('materials', {
   metadata: jsonb('metadata').default({}),
 
   embedding: vector('embedding', { dimensions: 1536 }),
+  searchVector: tsvector('search_vector'),
 
   deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -310,6 +326,7 @@ export const materials = pgTable('materials', {
   index('materials_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),
   index('materials_embedding_hnsw_idx').using('hnsw', table.embedding.op('vector_cosine_ops')),
   index('materials_tenant_unit_idx').on(table.tenantId, table.unit),
+  index('materials_search_idx').using('gin', table.searchVector),
 ]);
 
 // ═══════════════════════════════════════════════════════════════

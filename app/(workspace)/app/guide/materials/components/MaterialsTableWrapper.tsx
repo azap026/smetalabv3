@@ -10,6 +10,8 @@ interface MaterialsTableWrapperProps {
     onAiSearch: (query: string) => void;
     onAiModeChange: (val: boolean) => void;
     onSearchValueChange: (val: string) => void;
+    onEndReached?: () => void;
+    isLoadingMore?: boolean;
     tableActions: {
         onInsertRequest: (afterId?: string) => void;
         onCancelInsert: () => void;
@@ -26,6 +28,8 @@ export function MaterialsTableWrapper({
     onAiSearch,
     onAiModeChange,
     onSearchValueChange,
+    onEndReached,
+    isLoadingMore,
     tableActions
 }: MaterialsTableWrapperProps) {
     return (
@@ -42,6 +46,8 @@ export function MaterialsTableWrapper({
             isSearching={isSearching}
             externalSearchValue={searchTerm}
             onSearchValueChange={onSearchValueChange}
+            onEndReached={onEndReached}
+            isLoadingMore={isLoadingMore}
             meta={{
                 onInsertRequest: tableActions.onInsertRequest,
                 onCancelInsert: tableActions.onCancelInsert,

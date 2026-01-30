@@ -26,9 +26,10 @@ import { useMaterialsTable } from './hooks/useMaterialsTable';
 
 interface MaterialsClientProps {
     initialData: MaterialRow[];
+    totalCount: number;
 }
 
-export function MaterialsClient({ initialData }: MaterialsClientProps) {
+export function MaterialsClient({ initialData, totalCount }: MaterialsClientProps) {
     const [mounted, setMounted] = useState(false);
     const [data, setData] = useState<MaterialRow[]>(initialData);
 
@@ -43,7 +44,7 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
     // Initialize hooks
     const actions = useMaterialsActions(data, setData);
     const ai = useAiIndexing();
-    const search = useMaterialsSearch(initialData, setData);
+    const search = useMaterialsSearch(initialData, data, setData);
     const table = useMaterialsTable(data, setData);
 
     if (!mounted) return null;
@@ -67,7 +68,7 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
             </Breadcrumb>
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between px-1 md:px-0">
-                <MaterialsHeader isLoading={search.isLoadingMore} />
+                <MaterialsHeader isLoading={search.isLoadingMore} totalCount={totalCount} />
                 <MaterialsToolbar
                     isImporting={actions.isImporting}
                     isExporting={actions.isExporting}
@@ -100,6 +101,8 @@ export function MaterialsClient({ initialData }: MaterialsClientProps) {
                     onAiSearch={search.handleAiSearch}
                     onAiModeChange={search.setIsAiMode}
                     onSearchValueChange={search.setSearchTerm}
+                    onEndReached={search.loadMore}
+                    isLoadingMore={search.isLoadingMore}
                     tableActions={{
                         onInsertRequest: table.onInsertRequest,
                         onCancelInsert: table.onCancelInsert,

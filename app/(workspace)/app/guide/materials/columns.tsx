@@ -3,6 +3,7 @@
 import * as React from "react"
 import { ColumnDef, Table } from "@tanstack/react-table"
 import { Pencil, Settings, Trash, Check, X, Plus } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
@@ -278,12 +279,14 @@ export const columns: ColumnDef<MaterialRow>[] = [
             const imageUrl = row.original.imageUrl
             if (!imageUrl) return <div className="w-10 h-10 bg-muted/30 rounded flex items-center justify-center text-[10px] text-muted-foreground/50">N/A</div>
             return (
-                <div className="w-10 h-10 relative group-hover/row:scale-110 transition-transform">
-                    <img
+                <div className="w-10 h-10 relative group-hover/row:scale-110 transition-transform overflow-hidden rounded shadow-sm border border-border/50">
+                    <Image
                         src={imageUrl}
                         alt=""
-                        className="w-full h-full object-cover rounded shadow-sm border border-border/50"
-                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                        fill
+                        sizes="40px"
+                        className="object-cover"
+                        loading="lazy"
                     />
                 </div>
             )

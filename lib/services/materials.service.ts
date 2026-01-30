@@ -9,7 +9,7 @@ import { materialSchema } from '@/lib/validations/schemas';
 import { withActiveTenant } from '@/lib/db/queries';
 
 export class MaterialsService {
-    static async getMany(teamId: number | null, limit?: number, search?: string): Promise<Result<MaterialRow[]>> {
+    static async getMany(teamId: number | null, limit?: number, search?: string, offset?: number, lastCode?: string): Promise<Result<MaterialRow[]>> {
         try {
             const filters = [withActiveTenant(materials, teamId)];
 
@@ -17,10 +17,28 @@ export class MaterialsService {
                 filters.push(ilike(materials.name, `%${search}%`));
             }
 
-            const finalLimit = limit || (search ? 500 : 1000);
+            if (lastCode) {
+                filters.push(sql`${materials.code} > ${lastCode}`);
+            }
+
+            const finalLimit = limit || (search ? 5 : 5);
 
             const data = await db
-                .select()
+                .select({
+                    id: materials.id,
+                    tenantId: materials.tenantId,
+                    code: materials.code,
+                    name: materials.name,
+                    unit: materials.unit,
+                    price: materials.price,
+                    vendor: materials.vendor,
+                    categoryLv1: materials.categoryLv1,
+                    categoryLv2: materials.categoryLv2,
+                    categoryLv3: materials.categoryLv3,
+                    categoryLv4: materials.categoryLv4,
+                    status: materials.status,
+                    createdAt: materials.createdAt,
+                })
                 .from(materials)
                 .where(and(...filters))
                 .orderBy(materials.code)

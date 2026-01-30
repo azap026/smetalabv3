@@ -1,4 +1,4 @@
-import { and, eq, sql, gt } from 'drizzle-orm';
+import { and, eq, sql, gt, ilike } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { works, NewWork } from '@/lib/db/schema';
 import { generateEmbedding } from '@/lib/ai/embeddings';
@@ -9,15 +9,42 @@ import { workSchema } from '@/lib/validations/schemas';
 import { withActiveTenant } from '@/lib/db/queries';
 
 export class WorksService {
-    static async getMany(teamId: number | null): Promise<Result<WorkRow[]>> {
+    static async getMany(teamId: number | null, limit?: number, search?: string, lastSortOrder?: number): Promise<Result<WorkRow[]>> {
         try {
-            const data = await db
-                .select()
-                .from(works)
-                .where(withActiveTenant(works, teamId))
-                .orderBy(works.sortOrder) as WorkRow[];
+            const filters = [withActiveTenant(works, teamId)];
 
-            return success(data);
+            if (search) {
+                filters.push(ilike(works.name, `%${search}%`));
+            }
+
+            if (typeof lastSortOrder === 'number') {
+                filters.push(gt(works.sortOrder, lastSortOrder));
+            }
+
+            const finalLimit = limit || (search ? 5 : 5);
+
+            const data = await db
+                .select({
+                    id: works.id,
+                    tenantId: works.tenantId,
+                    code: works.code,
+                    name: works.name,
+                    unit: works.unit,
+                    price: works.price,
+                    phase: works.phase,
+                    category: works.category,
+                    subcategory: works.subcategory,
+                    shortDescription: works.shortDescription,
+                    status: works.status,
+                    createdAt: works.createdAt,
+                    sortOrder: works.sortOrder,
+                })
+                .from(works)
+                .where(and(...filters))
+                .orderBy(works.sortOrder)
+                .limit(finalLimit);
+
+            return success(data as WorkRow[]);
         } catch (e) {
             console.error('getManyWorks error:', e);
             return error('Ошибка при получении работ');
@@ -223,7 +250,7 @@ export class WorksService {
 
             // ...boost logic omitted for brevity, keeping existing...
             // Возвращаем как есть
-            return success(results as unknown as WorkRow[]);
+            return success(results as WorkRow[]);
         } catch (e) {
             console.error('searchWorks error:', e);
             return error('Ошибка поиска');

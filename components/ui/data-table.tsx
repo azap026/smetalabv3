@@ -76,16 +76,6 @@ interface DataTableProps<TData, TValue> {
     onSearchValueChange?: (val: string) => void
 }
 
-// --- Stable Virtuoso Components ---
-interface VirtuosoHeader {
-    id: string;
-    column: {
-        columnDef: {
-            size?: number;
-        };
-    };
-}
-
 const VirtuosoTableComponents: TableComponents<Row<unknown>, { flatHeaders: unknown[] }> = {
     Table: ({ children, style, ...props }) => (
         <table
@@ -157,7 +147,6 @@ export function DataTable<TData, TValue>({
     externalSearchValue,
     onSearchValueChange,
     onEndReached,
-    isLoadingMore,
 }: DataTableProps<TData, TValue> & {
     isSearching?: boolean;
     isAiMode?: boolean;

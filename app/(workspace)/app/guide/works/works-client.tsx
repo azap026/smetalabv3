@@ -250,7 +250,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
 
 
     // Sorting reset
-    const [isReordering, startReorderTransition] = useTransition();
+    const [, startReorderTransition] = useTransition();
 
     const handleReorder = () => {
         startReorderTransition(async () => {
@@ -275,7 +275,7 @@ export function WorksClient({ initialData }: WorksClientProps) {
         });
 
         startAiSearchTransition(async () => {
-            console.log(`Starting client-side search for: ${query}`);
+            // Starting client-side search...
             const result = await searchWorks(query);
 
             if (result.success) {

@@ -2,24 +2,42 @@ name: CI/CD Pipeline
 
 permissions:
   contents: read
+  pull-requests: read
 
 on:
   push:
-    branches: [main]
+    branches: [main, test-vscode]
   pull_request:
-    branches: [main]
+    branches: [main, test-vscode]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  commitlint:
+    name: Lint Commit Messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint commit messages
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
   security:
+    name: Security Checks
     runs-on: ubuntu-latest
     permissions:
       security-events: write
       contents: read
-      actions: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,9 +47,8 @@ jobs:
         if: github.event_name == 'pull_request'
 
   ci:
+    name: Quality Checks
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     services:
       postgres:
         image: ankane/pgvector:v0.5.1
@@ -49,7 +66,7 @@ jobs:
 
     env:
       POSTGRES_URL: postgresql://postgres:password@localhost:5432/smetalab
-      AUTH_SECRET: supersecretcomplexstring123
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'supersecretcomplexstring123' }}
       BASE_URL: http://localhost:3000
       STRIPE_SECRET_KEY: sk_test_placeholder
       STRIPE_WEBHOOK_SECRET: whsec_placeholder
@@ -65,14 +82,14 @@ jobs:
         with:
           version: 9
 
-      - name: Install Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Setup Database
         run: |
@@ -83,54 +100,50 @@ jobs:
         run: pnpm build
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm run lint
 
-      - name: Type check
-        run: pnpm type-check
+      - name: Type Check
+        run: pnpm run type-check
 
-      - name: Run tests
-        run: pnpm test
+      - name: Run Tests
+        run: pnpm run test
 
+  docker-check:
+    name: Docker Build Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-  # 🚀 DEPLOYMENT: Only runs on main branch after CI passes
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: smetalab:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_BASE_URL=http://localhost:3000
+
+  # 🚀 DEPLOYMENT: Only runs on main branch after all checks pass
   deploy:
-    needs: [security, ci]
+    name: Deploy to Production
+    needs: [security, ci, docker-check]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     environment: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Run Database Migrations
-        env:
-          POSTGRES_URL: "${{ secrets.POSTGRES_URL }}"
-        run: pnpm db:migrate
-
       - name: Trigger Render Deployment
-        # NOTE: You MUST disable 'Auto Deploy' in Render Dashboard for this to work as expected.
-        # This ensuring deployment happens ONLY after CI/CD tests pass here.
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         if: success() && env.RENDER_DEPLOY_HOOK != ''
         run: |
           echo "Triggering Render deployment..."
-          curl -f -s -X POST "$RENDER_DEPLOY_HOOK" || exit 1
+          curl -f -s -X POST "$RENDER_DEPLOY_HOOK"
           echo "Deployment request sent to Render."

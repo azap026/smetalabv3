@@ -47,7 +47,7 @@ export function useMaterialsActions(data: MaterialRow[], setData: React.Dispatch
                     } else {
                         toast({ variant: "destructive", title: "Ошибка импорта", description: result.message || "Неизвестная ошибка" });
                     }
-                } catch (_error) {
+                } catch {
                     toast({ variant: "destructive", title: "Ошибка", description: "Не удалось отправить файл на сервер." });
                 }
             });

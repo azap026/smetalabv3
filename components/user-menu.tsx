@@ -14,17 +14,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { signOut } from '@/app/(login)/actions';
 import { useRouter, usePathname } from 'next/navigation';
-import useSWR, { mutate } from 'swr';
+
 import { User as UserType } from '@/lib/db/schema';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useUserContext } from '@/components/permissions-provider';
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-type UserWithPermissions = UserType & {
-    permissions: string[];
-    teamId: number | null;
-};
 
 export function UserMenu() {
     const [mounted, setMounted] = React.useState(false);

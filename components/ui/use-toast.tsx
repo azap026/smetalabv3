@@ -14,10 +14,10 @@ const ToastContext = createContext<{
 });
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const toast = useCallback((opts: ToastOptions) => {
+  const toast = useCallback((_opts: ToastOptions) => {
     // This is a placeholder implementation.
     // In a real app, this would trigger a visual toast notification.
-    console.log('[Toast]:', opts.title, opts.description);
+    // Toast notification triggered.
   }, []);
   return (
     <ToastContext.Provider value={{ toast }}>

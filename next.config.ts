@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     /* ppr: true,
     clientSegmentCache: true */
   },
+  output: "standalone",
   async headers() {
     return [
       {
@@ -46,6 +47,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self'",
+              "worker-src 'self' blob:",
               "connect-src 'self' https://api.stripe.com https://api.openai.com wss:",
               "frame-src https://js.stripe.com https://checkout.stripe.com",
               "object-src 'none'",

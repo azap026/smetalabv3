@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ColumnDef, Table } from "@tanstack/react-table"
+import { ColumnDef, Table, Row } from "@tanstack/react-table"
 import { Pencil, Settings, Trash, Loader2, Plus, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -113,7 +113,7 @@ const RowActions = React.memo(({ row, table }: RowActionsProps) => {
 })
 RowActions.displayName = "RowActions"
 
-const IndexCell = React.memo(({ row, table }: { row: any; table: any }) => {
+const IndexCell = React.memo(({ row, table }: { row: Row<WorkRow>; table: Table<WorkRow> }) => {
     const isPlaceholder = row.original.isPlaceholder;
     const meta = table.options.meta as TableMeta<WorkRow>
     const index = row.index + 1;
@@ -147,7 +147,7 @@ const IndexCell = React.memo(({ row, table }: { row: any; table: any }) => {
 });
 IndexCell.displayName = "IndexCell";
 
-const NameCell = React.memo(({ row, table }: { row: any; table: any }) => {
+const NameCell = React.memo(({ row, table }: { row: Row<WorkRow>; table: Table<WorkRow> }) => {
     const isPlaceholder = row.original.isPlaceholder;
     const meta = table.options.meta as TableMeta<WorkRow>
 
@@ -182,7 +182,7 @@ const NameCell = React.memo(({ row, table }: { row: any; table: any }) => {
 });
 NameCell.displayName = "NameCell";
 
-const UnitCell = React.memo(({ row, table }: { row: any; table: any }) => {
+const UnitCell = React.memo(({ row, table }: { row: Row<WorkRow>; table: Table<WorkRow> }) => {
     const isPlaceholder = row.original.isPlaceholder;
     const meta = table.options.meta as TableMeta<WorkRow>
 
@@ -198,7 +198,7 @@ const UnitCell = React.memo(({ row, table }: { row: any; table: any }) => {
 });
 UnitCell.displayName = "UnitCell";
 
-const PriceCell = React.memo(({ row, table }: { row: any; table: any }) => {
+const PriceCell = React.memo(({ row, table }: { row: Row<WorkRow>; table: Table<WorkRow> }) => {
     const isPlaceholder = row.original.isPlaceholder;
     const meta = table.options.meta as TableMeta<WorkRow>
 

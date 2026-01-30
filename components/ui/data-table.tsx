@@ -86,7 +86,7 @@ interface VirtuosoHeader {
     };
 }
 
-const VirtuosoTableComponents: TableComponents<any, any> = {
+const VirtuosoTableComponents: TableComponents<Row<unknown>, { flatHeaders: unknown[] }> = {
     Table: ({ children, style, ...props }) => (
         <table
             {...props}
@@ -116,10 +116,10 @@ interface DataTableRowProps<TData> {
     row: Row<TData>;
 }
 
-const DataTableRow = memo(({ row }: DataTableRowProps<any>) => {
+const DataTableRow = memo(<TData,>({ row }: DataTableRowProps<TData>) => {
     return (
         <>
-            {row.getVisibleCells().map((cell: any) => (
+            {row.getVisibleCells().map((cell) => (
                 <td
                     key={cell.id}
                     className="p-3 align-middle border-b border-r last:border-r-0"
@@ -179,12 +179,15 @@ export function DataTable<TData, TValue>({
     const [searchValue, setSearchValue] = useState("")
     const deferredSearchValue = useDeferredValue(searchValue)
     const { toast } = useToast()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [editingRow, setEditingRow] = useState<any | null>(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [deletingRow, setDeletingRow] = useState<any | null>(null)
     const [isUpdating, startUpdateTransition] = useTransition()
     const [isDeleting, startDeleteTransition] = useTransition()
 
     // Form data for editing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [editFormData, setEditFormData] = useState<any>(null)
 
     useEffect(() => {

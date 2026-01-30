@@ -127,6 +127,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NEXT_PUBLIC_BASE_URL=http://localhost:3000
+            POSTGRES_URL=postgresql://postgres:password@localhost:5432/smetalab
 
   # 🚀 DEPLOYMENT: Only runs on main branch after all checks pass
   deploy:

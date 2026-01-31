@@ -9,7 +9,7 @@ import {
 import { getBaseUrl } from '@/lib/utils/url';
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-04-30.basil'
+  apiVersion: '2026-01-28.clover'
 });
 
 export async function createCheckoutSession({

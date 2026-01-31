@@ -28,6 +28,7 @@ import {
 } from '@/lib/auth/middleware';
 import { sendInvitationEmail } from '@/lib/email/email';
 import { hasPermission } from '@/lib/auth/rbac';
+import { checkRateLimit, getClientIp } from '@/lib/auth/rate-limit';
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -54,6 +55,11 @@ const signInSchema = z.object({
 });
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
+  const ip = await getClientIp();
+  if (!checkRateLimit(ip)) {
+    return { error: 'Too many requests. Please try again later.' };
+  }
+
   const { email, password, inviteId } = data;
 
   const userResult = await db
@@ -165,6 +171,11 @@ const signUpSchema = z.object({
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
+  const ip = await getClientIp();
+  if (!checkRateLimit(ip)) {
+    return { error: 'Too many requests. Please try again later.' };
+  }
+
   const { email, password, organizationName, inviteId } = data;
 
   const existingUser = await db

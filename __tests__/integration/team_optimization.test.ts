@@ -28,6 +28,7 @@ vi.mock('react', async (importOriginal) => {
     const actual = await importOriginal();
     return {
         ...(actual as object),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cache: (fn: any) => fn, // Passthrough
     };
 });
@@ -47,7 +48,7 @@ describe('Team Queries Optimization', () => {
 
         // Update verifyToken mock to return this user
         const sessionMock = await import('@/lib/auth/session');
-        // @ts-ignore
+        // @ts-expect-error - Mocking session
         sessionMock.verifyToken = async () => ({
             user: { id: testUserId },
             expires: new Date(Date.now() + 1000000)
@@ -82,6 +83,7 @@ describe('Team Queries Optimization', () => {
         // It should NOT have teamMembers property populated as an array of objects with user info
         // Note: In Drizzle, if 'with' is not used, the property is usually missing or undefined.
         // But if I cast it to any, I can check.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const teamAny = team as any;
         expect(teamAny.teamMembers).toBeUndefined();
     });

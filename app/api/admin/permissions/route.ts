@@ -4,6 +4,8 @@ import { permissions, rolePermissions, platformRolePermissions } from '@/lib/db/
 import { eq, and } from 'drizzle-orm';
 import { getUser } from '@/lib/db/queries';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         const user = await getUser();

@@ -23,6 +23,7 @@ export type SafeActionOptions = {
     allowedRoles?: TenantRole[];
 };
 
+// Overload signatures
 export function safeAction<T, Args extends unknown[]>(
     handler: (context: ActionContext, ...args: Args) => Promise<Result<T>>,
     options?: { requireTeam?: true; name?: string; allowedRoles?: TenantRole[] }
@@ -33,15 +34,16 @@ export function safeAction<T, Args extends unknown[]>(
     options: { requireTeam: false; name?: string; allowedRoles?: TenantRole[] }
 ): (...args: Args) => Promise<Result<T>>;
 
-/* eslint-disable no-redeclare, @typescript-eslint/no-explicit-any */
+// Implementation
+// eslint-disable-next-line no-redeclare
 export function safeAction<T, Args extends unknown[]>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handler: (context: any, ...args: Args) => Promise<Result<T>>,
     options: SafeActionOptions = { requireTeam: true }
 ) {
-    /* eslint-enable no-redeclare, @typescript-eslint/no-explicit-any */
     return async (...args: Args): Promise<Result<T>> => {
         const start = Date.now();
-        const actionName = options.name || (handler as any).name || 'AnonymousAction';
+        const actionName = options.name || (handler as unknown as { name?: string }).name || 'AnonymousAction';
 
         try {
             const user = await getUser();

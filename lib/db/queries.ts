@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull, or, ilike, AnyColumn, sql, gt } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users, works, materials } from './schema';
+import { activityLogs, teamMembers, teams, users, works, materials, TeamDataWithMembers, Team } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 import { cache } from 'react';
@@ -122,7 +122,23 @@ export async function getActivityLogs(userId?: number) {
     .limit(10);
 }
 
-export const getTeamForUser = cache(async () => {
+export const getTeamForUser = cache(async (): Promise<Team | null> => {
+  const user = await getUser();
+  if (!user) {
+    return null;
+  }
+
+  const result = await db.query.teamMembers.findFirst({
+    where: eq(teamMembers.userId, user.id),
+    with: {
+      team: true
+    }
+  });
+
+  return result?.team || null;
+});
+
+export const getTeamWithMembers = cache(async (): Promise<TeamDataWithMembers | null> => {
   const user = await getUser();
   if (!user) {
     return null;
@@ -149,7 +165,7 @@ export const getTeamForUser = cache(async () => {
     }
   });
 
-  return result?.team || null;
+  return (result?.team as TeamDataWithMembers) || null;
 });
 
 export async function getWorks(limit?: number, lastSortOrder?: number) {

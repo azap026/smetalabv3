@@ -1,8 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
-import { getUser, getTeamForUser } from '@/lib/db/queries';
-import { SWRConfig } from 'swr';
+import { getUser } from '@/lib/db/queries';
 import { ToastProvider } from '@/components/ui/use-toast';
 
 export const metadata: Metadata = {
@@ -25,7 +24,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const userPromise = getUser();
-  const teamPromise = getTeamForUser();
 
   return (
     <html
@@ -35,7 +33,7 @@ export default function RootLayout({
     >
       <body className="min-h-[100dvh] bg-gray-50 dark:bg-gray-950 text-black dark:text-white">
         <Suspense>
-          <SWRWrapper userPromise={userPromise} teamPromise={teamPromise}>
+          <SWRWrapper userPromise={userPromise}>
             <ToastProvider>
               {children}
             </ToastProvider>

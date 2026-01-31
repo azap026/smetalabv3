@@ -1,0 +1,130 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: CI/CD Pipeline
+
+permissions:
+  contents: read
+  pull-requests: read
+
+on:
+  push:
+    branches: [main, test-vscode]
+  pull_request:
+    branches: [main, test-vscode]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  commitlint:
+    name: Lint Commit Messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint commit messages
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Dependency Review
+        uses: actions/dependency-review-action@v4
+        if: github.event_name == 'pull_request'
+
+  ci:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: ankane/pgvector:v0.5.1
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: smetalab
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_URL: postgresql://postgres:password@localhost:5432/smetalab
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET || 'supersecretcomplexstring123' }}
+      BASE_URL: http://localhost:3000
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+      RESEND_API_KEY: re_placeholder
+      AUTH_TRUST_HOST: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Database
+        run: |
+          pnpm db:migrate
+          pnpm db:seed
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Type Check
+        run: pnpm run type-check
+
+      - name: Run Tests
+        run: pnpm run test
+
+  # 🚀 DEPLOYMENT: Only runs on main branch after all checks pass
+  deploy:
+    name: Deploy to Production
+    needs: [security, ci]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ vars.DEPLOY_ENVIRONMENT || 'production' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deployment
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: success() && env.RENDER_DEPLOY_HOOK != ''
+        run: |
+          echo "Triggering Render deployment..."
+          curl -f -s -X POST "$RENDER_DEPLOY_HOOK"
+          echo "Deployment request sent to Render."

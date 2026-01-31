@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Install pnpm
@@ -40,7 +40,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         
       - name: Run Dependency Review
         uses: actions/dependency-review-action@v4
@@ -75,7 +75,7 @@ jobs:
       AUTH_TRUST_HOST: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -118,7 +118,7 @@ jobs:
       name: ${{ vars.DEPLOY_ENVIRONMENT || 'production' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Trigger Render Deployment
         env:

@@ -1,2 +1,0 @@
-CREATE INDEX IF NOT EXISTS "materials_embedding_hnsw_idx" ON "materials" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "works_embedding_hnsw_idx" ON "works" USING hnsw ("embedding" vector_cosine_ops);

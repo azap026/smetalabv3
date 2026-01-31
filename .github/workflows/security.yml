@@ -79,35 +79,3 @@ jobs:
           path: outdated.json
           retention-days: 7
 
-  docker-security:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Build Docker image (if Dockerfile exists)
-        run: |
-          if [ -f Dockerfile ]; then
-            docker build -t smetalab:${{ github.sha }} .
-          else
-            echo "No Dockerfile found, skipping Docker security scan"
-            exit 0
-          fi
-      
-      - name: Run Trivy container scan
-        if: hashFiles('Dockerfile') != ''
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'smetalab:${{ github.sha }}'
-          format: 'sarif'
-          output: 'docker-trivy-results.sarif'
-      
-      - name: Upload Docker scan results
-        if: hashFiles('Dockerfile') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'docker-trivy-results.sarif'

@@ -5,10 +5,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+const connectionString = process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
 
 if (!connectionString) {
-  throw new Error('POSTGRES_URL or DATABASE_URL environment variable is not set');
+  throw new Error('DATABASE_URL environment variable is not set');
 }
 
 /**
@@ -19,11 +19,14 @@ const globalForDb = globalThis as unknown as {
   db: ReturnType<typeof drizzle<typeof schema>> | undefined;
 };
 
+const isLocalConnection = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');
+const sslRequired = !isLocalConnection;
+
 export const client =
   globalForDb.client ??
   postgres(connectionString, {
     prepare: false,
-    ssl: process.env.CI || connectionString.includes('localhost') ? false : 'require',
+    ssl: sslRequired ? 'require' : false,
     max: process.env.NODE_ENV === 'production' ? undefined : 10,
   });
 

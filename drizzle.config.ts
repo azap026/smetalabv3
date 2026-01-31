@@ -3,12 +3,21 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
+
 export default {
   schema: './lib/db/schema.ts',
   out: './lib/db/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.POSTGRES_URL!,
-    ssl: process.env.POSTGRES_URL?.includes('localhost') || process.env.POSTGRES_URL?.includes('127.0.0.1') ? false : { rejectUnauthorized: false },
+    url: databaseUrl,
+    ssl:
+      databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')
+        ? false
+        : { rejectUnauthorized: false },
   },
 } satisfies Config;

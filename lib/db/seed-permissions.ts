@@ -52,7 +52,7 @@ const PLATFORM_ROLE_PERMISSIONS: Record<PlatformRole, Record<string, 'read' | 'm
     },
 };
 
-async function seedPermissions() {
+export async function seedPermissions() {
     console.log('🧹 Cleaning up old permissions...');
     await db.delete(platformRolePermissions);
     await db.delete(rolePermissions);
@@ -88,9 +88,11 @@ async function seedPermissions() {
     console.log('✅ 3-state permissions seeded successfully!');
 }
 
-seedPermissions()
-    .catch((error) => {
-        console.error('❌ Failed:', error);
-        process.exit(1);
-    })
-    .finally(() => process.exit(0));
+if (process.argv[1]?.endsWith('seed-permissions.ts')) {
+    seedPermissions()
+        .catch((error) => {
+            console.error('❌ Failed:', error);
+            process.exit(1);
+        })
+        .finally(() => process.exit(0));
+}

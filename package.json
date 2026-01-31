@@ -13,12 +13,14 @@
     "generate:embeddings": "npx tsx scripts/generate-embeddings.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate-local": "npx tsx scripts/db-migrate-local.ts",
     "db:studio": "drizzle-kit studio --host 127.0.0.1",
+    "db:push-cloud": "npx tsx scripts/db-sync.ts push",
+    "db:pull-cloud": "npx tsx scripts/db-sync.ts pull",
     "lint": "npx eslint .",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "docker:up": "docker-compose up -d --build"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -1,44 +1,15 @@
-version: '3.8'
-
 services:
   db:
-    image: pgvector/pgvector:pg15
+    image: pgvector/pgvector:pg17
     container_name: smetalab-db
     environment:
-      POSTGRES_USER: smetalab_user
-      POSTGRES_PASSWORD: smetalab_password
-      POSTGRES_DB: smetalab_local_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: smetalab
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./lib/db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U smetalab_user -d smetalab_local_db" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_BASE_URL=${BASE_URL:-http://localhost:3000}
-        - NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
-        - NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
-    container_name: smetalab-app
-    restart: always
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    environment:
-      - POSTGRES_URL=postgresql://smetalab_user:smetalab_password@db:5432/smetalab_local_db
-      - BASE_URL=${BASE_URL:-http://localhost:3000}
-    depends_on:
-      db:
-        condition: service_healthy
 
 volumes:
   postgres_data:

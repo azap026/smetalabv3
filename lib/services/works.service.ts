@@ -259,6 +259,14 @@ export class WorksService {
 
     static async upsertMany(teamId: number, data: NewWork[]): Promise<Result<void>> {
         try {
+            // Удаляем дубликаты по коду внутри одного батча/запроса, 
+            // иначе Postgres выдаст ошибку "ON CONFLICT DO UPDATE command cannot affect row a second time"
+            const uniqueDataMap = new Map<string, NewWork>();
+            for (const item of data) {
+                uniqueDataMap.set(item.code, item);
+            }
+            const uniqueData = Array.from(uniqueDataMap.values());
+
             await db.transaction(async (tx) => {
                 const BATCH_SIZE = 500;
 
@@ -270,9 +278,10 @@ export class WorksService {
 
                 let currentMaxSortOrder = lastWork?.sortOrder || 0;
 
-                for (let i = 0; i < data.length; i += BATCH_SIZE) {
-                    const batch = data.slice(i, i + BATCH_SIZE).map((item, idx) => ({
+                for (let i = 0; i < uniqueData.length; i += BATCH_SIZE) {
+                    const batch = uniqueData.slice(i, i + BATCH_SIZE).map((item, idx) => ({
                         ...item,
+                        tenantId: teamId, // Принудительно ставим tenantId
                         // Если sortOrder не передан, добавляем в конец
                         sortOrder: item.sortOrder || (currentMaxSortOrder + (idx + 1) * 100)
                     }));

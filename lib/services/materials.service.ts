@@ -188,11 +188,21 @@ export class MaterialsService {
 
     static async upsertMany(teamId: number, data: NewMaterial[]): Promise<Result<void>> {
         try {
+            // Удаляем дубликаты по коду
+            const uniqueDataMap = new Map<string, NewMaterial>();
+            for (const item of data) {
+                uniqueDataMap.set(item.code, item);
+            }
+            const uniqueData = Array.from(uniqueDataMap.values());
+
             await db.transaction(async (tx) => {
                 const DB_BATCH_SIZE = 500;
 
-                for (let i = 0; i < data.length; i += DB_BATCH_SIZE) {
-                    const batch = data.slice(i, i + DB_BATCH_SIZE);
+                for (let i = 0; i < uniqueData.length; i += DB_BATCH_SIZE) {
+                    const batch = uniqueData.slice(i, i + DB_BATCH_SIZE).map(item => ({
+                        ...item,
+                        tenantId: teamId
+                    }));
 
                     await tx.insert(materials).values(batch)
                         .onConflictDoUpdate({

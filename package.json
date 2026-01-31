@@ -92,7 +92,7 @@
     "concurrently": "^9.2.1",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.6",
-    "globals": "^17.1.0",
+    "globals": "^17.2.0",
     "import-in-the-middle": "^2.0.6",
     "jsdom": "^27.4.0",
     "require-in-the-middle": "^8.0.1",

@@ -23,25 +23,27 @@ export type SafeActionOptions = {
     allowedRoles?: TenantRole[];
 };
 
-export function safeAction<T, Args extends unknown[]>(
-    handler: (context: ActionContext, ...args: Args) => Promise<Result<T>>,
-    options?: { requireTeam?: true; name?: string; allowedRoles?: TenantRole[] }
-): (...args: Args) => Promise<Result<T>>;
-
-export function safeAction<T, Args extends unknown[]>(
-    handler: (context: ActionContextOptionalTeam, ...args: Args) => Promise<Result<T>>,
-    options: { requireTeam: false; name?: string; allowedRoles?: TenantRole[] }
-): (...args: Args) => Promise<Result<T>>;
-
-/* eslint-disable no-redeclare, @typescript-eslint/no-explicit-any */
-export function safeAction<T, Args extends unknown[]>(
-    handler: (context: any, ...args: Args) => Promise<Result<T>>,
-    options: SafeActionOptions = { requireTeam: true }
-) {
-    /* eslint-enable no-redeclare, @typescript-eslint/no-explicit-any */
+/**
+ * Обертка для серверных действий (Server Actions) с проверкой авторизации и RBAC.
+ * По умолчанию требует наличие команды (team).
+ * Использует Generic R для автоматического определения типа контекста в зависимости от options.
+ */
+export function safeAction<
+    T,
+    Args extends unknown[],
+    R extends boolean = true
+>(
+    handler: (
+        context: R extends false ? ActionContextOptionalTeam : ActionContext,
+        ...args: Args
+    ) => Promise<Result<T>>,
+    options?: { requireTeam?: R; name?: string; allowedRoles?: TenantRole[] }
+): (...args: Args) => Promise<Result<T>> {
     return async (...args: Args): Promise<Result<T>> => {
         const start = Date.now();
-        const actionName = options.name || (handler as any).name || 'AnonymousAction';
+        const currentOptions = (options || {}) as SafeActionOptions;
+        const requireTeam = currentOptions.requireTeam !== false;
+        const actionName = currentOptions.name || handler.name || 'AnonymousAction';
 
         try {
             const user = await getUser();
@@ -53,7 +55,7 @@ export function safeAction<T, Args extends unknown[]>(
             // Set Sentry user context
             Sentry.setUser({ id: user.id.toString(), email: user.email });
 
-            let team = undefined;
+            let team: Team | undefined = undefined;
             let role: TenantRole | undefined = undefined;
 
             const teamResult = await db.query.teamMembers.findFirst({
@@ -61,7 +63,7 @@ export function safeAction<T, Args extends unknown[]>(
                 with: { team: true }
             });
 
-            if (options.requireTeam !== false) {
+            if (requireTeam) {
                 if (!teamResult) {
                     console.warn(`⚠️ [Action ${actionName}] Team not found for User ${user.id}`);
                     return error('Команда не найдена', 'TEAM_NOT_FOUND');
@@ -76,15 +78,20 @@ export function safeAction<T, Args extends unknown[]>(
             }
 
             // RBAC Check
-            if (options.allowedRoles && options.allowedRoles.length > 0) {
-                if (!role || !options.allowedRoles.includes(role)) {
-                    console.warn(`⚠️ [Action ${actionName}] Forbidden: User ${user.id} with role ${role} tried to access action requiring [${options.allowedRoles.join(', ')}]`);
+            if (currentOptions.allowedRoles && currentOptions.allowedRoles.length > 0) {
+                if (!role || !currentOptions.allowedRoles.includes(role)) {
+                    console.warn(`⚠️ [Action ${actionName}] Forbidden: User ${user.id} with role ${role} tried to access action requiring [${currentOptions.allowedRoles.join(', ')}]`);
                     return error('Доступ запрещен', 'FORBIDDEN');
                 }
             }
 
             // Execute handler
-            const result = await handler({ user, team, role }, ...args);
+            // Используем функциональный тип для избежания any, при этом гарантируем безопасность типизации 
+            // через предварительные проверки requireTeam в коде выше.
+            const result = await (handler as (c: ActionContextOptionalTeam, ...a: Args) => Promise<Result<T>>)(
+                { user, team, role },
+                ...args
+            );
 
             const duration = Date.now() - start;
 

@@ -2,7 +2,6 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
-import { SWRConfig } from 'swr';
 import { ToastProvider } from '@/components/ui/use-toast';
 
 export const metadata: Metadata = {

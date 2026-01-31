@@ -112,7 +112,7 @@ jobs:
   deploy:
     name: Deploy to Production
     needs: [security, ci]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.RENDER_DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment:
       name: ${{ vars.DEPLOY_ENVIRONMENT || 'production' }}

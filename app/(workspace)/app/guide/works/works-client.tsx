@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
-import { importWorks, exportWorks, deleteAllWorks, insertWorkAfter, searchWorks, reorderWorks } from '@/app/actions/works';
+import { importWorks, exportWorks, deleteAllWorks, reorderWorks } from '@/app/actions/works';
 import * as XLSX from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -170,6 +170,7 @@ export function WorksClient({ initialData, totalCount }: WorksClientProps) {
                 onChange={handleFileChange}
                 className="hidden"
                 accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                aria-label="Загрузить файл"
             />
             <Breadcrumb className="px-1 md:px-0">
                 <BreadcrumbList>

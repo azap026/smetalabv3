@@ -29,7 +29,6 @@ export function MaterialsTableWrapper({
     onAiModeChange,
     onSearchValueChange,
     onEndReached,
-    isLoadingMore,
     tableActions
 }: MaterialsTableWrapperProps) {
     return (
@@ -47,7 +46,6 @@ export function MaterialsTableWrapper({
             externalSearchValue={searchTerm}
             onSearchValueChange={onSearchValueChange}
             onEndReached={onEndReached}
-            isLoadingMore={isLoadingMore}
             meta={{
                 onInsertRequest: tableActions.onInsertRequest,
                 onCancelInsert: tableActions.onCancelInsert,

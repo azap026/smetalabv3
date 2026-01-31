@@ -7,10 +7,6 @@ dotenv.config();
 
 const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 
-if (!connectionString) {
-  throw new Error('POSTGRES_URL or DATABASE_URL environment variable is not set');
-}
-
 /**
  * Singleton pattern for the database client to prevent connection leaks during hot-reloads in development.
  */
@@ -19,11 +15,15 @@ const globalForDb = globalThis as unknown as {
   db: ReturnType<typeof drizzle<typeof schema>> | undefined;
 };
 
+// Fallback to a dummy connection string during build time to prevent crashes
+// when environment variables are missing (e.g. in Docker builds).
+const safeConnectionString = connectionString || 'postgres://dummy:dummy@localhost:5432/dummy';
+
 export const client =
   globalForDb.client ??
-  postgres(connectionString, {
+  postgres(safeConnectionString, {
     prepare: false,
-    ssl: process.env.CI || connectionString.includes('localhost') ? false : 'require',
+    ssl: process.env.CI || safeConnectionString.includes('localhost') ? false : 'require',
     max: process.env.NODE_ENV === 'production' ? undefined : 10,
   });
 

@@ -77,15 +77,6 @@ interface DataTableProps<TData, TValue> {
 }
 
 // --- Stable Virtuoso Components ---
-interface VirtuosoHeader {
-    id: string;
-    column: {
-        columnDef: {
-            size?: number;
-        };
-    };
-}
-
 const VirtuosoTableComponents: TableComponents<Row<unknown>, { flatHeaders: unknown[] }> = {
     Table: ({ children, style, ...props }) => (
         <table
@@ -157,7 +148,6 @@ export function DataTable<TData, TValue>({
     externalSearchValue,
     onSearchValueChange,
     onEndReached,
-    isLoadingMore,
 }: DataTableProps<TData, TValue> & {
     isSearching?: boolean;
     isAiMode?: boolean;
@@ -165,7 +155,6 @@ export function DataTable<TData, TValue>({
     externalSearchValue?: string;
     onSearchValueChange?: (val: string) => void;
     onEndReached?: () => void;
-    isLoadingMore?: boolean;
 }) {
     const [sorting, setSorting] = useState<SortingState>([])
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])

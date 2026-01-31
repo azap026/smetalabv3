@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
-import { importWorks, exportWorks, deleteAllWorks, insertWorkAfter, searchWorks, reorderWorks } from '@/app/actions/works';
+import { importWorks, exportWorks, deleteAllWorks, reorderWorks } from '@/app/actions/works';
 import * as XLSX from 'xlsx';
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -290,7 +290,6 @@ export function WorksClient({ initialData, totalCount }: WorksClientProps) {
                     externalSearchValue={search.searchTerm}
                     onSearchValueChange={search.setSearchTerm}
                     onEndReached={search.loadMore}
-                    isLoadingMore={search.isLoadingMore}
                     meta={{
                         onInsertRequest,
                         onCancelInsert,
